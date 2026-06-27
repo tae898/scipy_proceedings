@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  :root{
+    --teal:#1A5F7A; --teal-soft:#1A5F7A14; --teal-line:#1A5F7A2e;
+    --orange:#BF5700; --green:#116049;
+    --ink:#111111; --muted:#5d6b72; --faint:#8a969c;
+    --sans:"Inter","Helvetica Neue",Arial,system-ui,sans-serif;
+    --mono:"DejaVu Sans Mono","Liberation Mono",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  @page{size:12.8in 7.2in;margin:0;}
+  html,body{width:1280px;height:720px;background:#fff;}
+  body{font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased;text-rendering:geometricPrecision;}
+  .tn{width:1280px;height:720px;padding:46px 56px;display:flex;flex-direction:column;overflow:hidden;
+    background:
+      radial-gradient(1100px 460px at 92% -18%, #1A5F7A14, transparent 62%),
+      radial-gradient(900px 420px at -10% 120%, #BF570012, transparent 60%),
+      #ffffff;}
+
+  /* top bar */
+  .top{display:flex;align-items:center;gap:16px;flex:0 0 auto;}
+  .top img.logo{height:58px;width:58px;}
+  .chip{font-size:15px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#fff;
+    background:var(--teal);padding:6px 14px;border-radius:999px;}
+  .spacer{flex:1 1 auto;}
+  .arcade{height:56px;width:56px;border-radius:13px;border:1px solid rgba(17,17,17,0.1);
+    box-shadow:0 8px 22px rgba(16,46,60,0.10);}
+
+  /* hero */
+  .hero{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;}
+  .eyebrow{font-size:19px;font-weight:700;letter-spacing:0.04em;color:var(--teal);margin-bottom:14px;}
+  .eyebrow b{color:var(--orange);}
+  h1.big{font-size:86px;line-height:0.98;font-weight:800;letter-spacing:-0.022em;color:var(--ink);}
+  h1.big .t{color:var(--teal);}
+  .flow{display:flex;align-items:center;gap:14px;margin-top:30px;}
+  .pill{font-size:26px;font-weight:800;letter-spacing:0.01em;padding:11px 22px;border-radius:14px;
+    border:2px solid;}
+  .pill.v{color:var(--orange);border-color:#BF570040;background:#BF57000c;}
+  .pill.s{color:var(--teal);border-color:#1A5F7A40;background:#1A5F7A0c;}
+  .pill.g{color:var(--green);border-color:#11604940;background:#1160490c;}
+  .to{font-size:30px;font-weight:800;color:var(--faint);}
+  .one{font-size:26px;font-weight:800;color:#fff;background:var(--ink);padding:11px 22px;border-radius:14px;}
+
+  /* bottom */
+  .bot{flex:0 0 auto;display:flex;align-items:flex-end;justify-content:space-between;gap:24px;}
+  .who{max-width:760px;}
+  .ptitle{font-size:23px;font-weight:700;color:#27343a;line-height:1.18;letter-spacing:-0.01em;}
+  .by{font-size:18px;color:var(--muted);margin-top:7px;font-weight:500;}
+  .by b{color:var(--ink);font-weight:700;}
+  .install{font-family:var(--mono);font-size:21px;font-weight:600;color:#fff;background:var(--teal);
+    padding:13px 20px;border-radius:13px;white-space:nowrap;}
+  .install .pip{color:#bde6d4;}
+</style>
+</head>
+<body>
+<div class="tn">
+
+  <div class="top">
+    <img class="logo" src="{{HUMEMAI_LOGO}}" alt="HumemAI">
+    <span class="chip">SciPy 2026</span>
+    <span class="spacer"></span>
+    <img class="arcade" src="{{ARCADE_LOGO}}" alt="arcadedb-embedded">
+  </div>
+
+  <div class="hero">
+    <div class="eyebrow">Documents · property graph · vectors — <b>no servers, no ETL</b></div>
+    <h1 class="big">Three data models,<br>one <span class="t">Python process.</span></h1>
+    <div class="flow">
+      <span class="pill v">VECTOR</span>
+      <span class="pill s">SQL</span>
+      <span class="pill g">GRAPH</span>
+      <span class="to">→</span>
+      <span class="one">one embedded engine</span>
+    </div>
+  </div>
+
+  <div class="bot">
+    <div class="who">
+      <div class="ptitle">ArcadeDB in Python: An In-Process Multi-Model Database</div>
+      <div class="by"><b>Taewoon Kim</b> · HumemAI &nbsp;·&nbsp; vector → SQL → graph in one transaction, ≈130 ms</div>
+    </div>
+    <div class="install"><span class="pip">pip install</span> arcadedb-embedded</div>
+  </div>
+
+</div>
+</body>
+</html>

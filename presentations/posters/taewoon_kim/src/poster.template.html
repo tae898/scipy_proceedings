@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  :root{
+    --teal:#1A5F7A; --teal-soft:#1A5F7A14; --teal-line:#1A5F7A2e;
+    --orange:#BF5700; --green:#116049;
+    --ink:#111111; --muted:#5d6b72; --faint:#8a969c;
+    --bg:#ffffff; --surface:#ffffff; --surface-muted:#f6f8f9;
+    --border:rgba(17,17,17,0.10); --border-strong:rgba(17,17,17,0.16);
+    --shadow:0 12px 34px rgba(16,46,60,0.07);
+    --radius:20px; --radius-sm:13px;
+    --sans:"Inter","Helvetica Neue",Arial,system-ui,sans-serif;
+    --mono:"DejaVu Sans Mono","Liberation Mono",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  /* 1920x1080 px @96dpi = 20in x 11.25in → exact 16:9 PDF page */
+  @page{size:20in 11.25in;margin:0;}
+  html,body{width:1920px;height:1080px;background:var(--bg);}
+  body{font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased;
+    text-rendering:geometricPrecision;}
+  .poster{width:1920px;height:1080px;padding:38px 46px 28px;display:flex;flex-direction:column;
+    gap:16px;overflow:hidden;background:
+      radial-gradient(1200px 380px at 88% -8%, #1A5F7A0a, transparent 60%),
+      radial-gradient(900px 300px at -4% 108%, #BF57000a, transparent 60%),
+      var(--bg);}
+  .eyebrow{font-size:13px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;
+    color:var(--teal);}
+  .eyebrow.orange{color:var(--orange);} .eyebrow.green{color:var(--green);} .eyebrow.muted{color:var(--faint);}
+
+  /* ---------- HEADER ---------- */
+  header{display:flex;align-items:center;gap:26px;padding-bottom:16px;flex:0 0 auto;
+    border-bottom:2px solid var(--teal-line);}
+  .brandmark{height:82px;width:82px;flex:0 0 auto;}
+  .head-titles{flex:1 1 auto;min-width:0;}
+  .head-top{display:flex;align-items:center;gap:14px;margin-bottom:7px;}
+  .chip{font-size:12.5px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;
+    color:#fff;background:var(--teal);padding:4px 11px;border-radius:999px;}
+  .chip.ghost{color:var(--teal);background:var(--teal-soft);}
+  h1{font-size:42px;line-height:1.04;font-weight:800;letter-spacing:-0.012em;color:var(--ink);}
+  h1 .accent{color:var(--teal);}
+  .byline{margin-top:8px;font-size:18px;color:var(--muted);font-weight:500;}
+  .byline b{color:var(--ink);font-weight:700;} .byline .sep{color:var(--border-strong);margin:0 9px;}
+  .head-right{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:10px;}
+  .arcade{height:62px;width:62px;border-radius:14px;border:1px solid var(--border);box-shadow:var(--shadow);}
+  .install{font-family:var(--mono);font-size:16px;font-weight:600;color:#fff;background:var(--ink);
+    padding:10px 15px;border-radius:11px;white-space:nowrap;}
+  .install .pip{color:#9fe0c6;}
+
+  /* ---------- BODY GRID ---------- */
+  .body{flex:1 1 auto;display:grid;grid-template-columns:1fr 1.14fr 1fr;gap:18px;min-height:0;}
+  .col{display:flex;flex-direction:column;gap:14px;min-height:0;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:18px 20px;}
+  .card.hero{border:1.5px solid var(--teal-line);background:linear-gradient(180deg,#fbfdfe,#ffffff);
+    flex:1 1 auto;display:flex;flex-direction:column;}
+  .card.tint{background:var(--surface-muted);box-shadow:none;}
+  .card h2{font-size:19.5px;font-weight:800;letter-spacing:-0.01em;margin-top:6px;color:var(--ink);line-height:1.12;}
+  .card p{font-size:16px;line-height:1.46;color:#27343a;margin-top:8px;}
+  .card p .hl{color:var(--teal);font-weight:700;}
+  .card p .hlo{color:var(--orange);font-weight:700;}
+  .lede{font-size:16.5px !important;line-height:1.44 !important;color:#1c272c !important;}
+  .arrow{display:block;text-align:center;color:var(--orange);font-size:20px;font-weight:800;line-height:1;}
+  .mono{font-family:var(--mono);font-size:0.86em;}
+
+  /* architecture in col A */
+  .arch-in{margin-top:13px;}
+  .arch-in img{width:100%;border-radius:11px;border:1px solid var(--border);background:#fff;padding:6px 8px;}
+  .arch-cap{font-size:12.8px;color:var(--muted);line-height:1.34;margin-top:7px;}
+  .arch-cap b{color:var(--ink);}
+
+  /* ---------- HERO ---------- */
+  .hero-row{display:flex;gap:15px;margin-top:12px;align-items:stretch;flex:1 1 auto;}
+  .hybrid-img{flex:0 0 205px;display:flex;}
+  .hybrid-img img{width:100%;object-fit:contain;border-radius:11px;border:1px solid var(--border);background:#fff;}
+  pre{flex:1 1 auto;font-family:var(--mono);font-size:12.6px;line-height:1.5;color:#e9eef2;
+    background:#13242c;border-radius:13px;padding:14px 15px;overflow:hidden;}
+  pre .c{color:#7fa7b5;} pre .k{color:#5fb3d4;} pre .s{color:#a7e0bf;} pre .f{color:#e7b07a;}
+  .statline{margin-top:13px;display:flex;align-items:center;gap:14px;background:var(--teal);
+    border-radius:15px;padding:13px 19px;color:#fff;}
+  .statline .big{font-size:32px;font-weight:800;letter-spacing:-0.01em;line-height:1;white-space:nowrap;}
+  .statline .sub{font-size:14.5px;line-height:1.3;opacity:0.94;font-weight:500;}
+  .statline .sub b{font-weight:800;opacity:1;}
+
+  /* ---------- TABLES ---------- */
+  table{width:100%;border-collapse:collapse;font-size:14px;}
+  caption{caption-side:top;text-align:left;font-size:12.8px;color:var(--muted);margin-bottom:8px;line-height:1.35;}
+  th,td{padding:6px 8px;text-align:center;border-bottom:1px solid var(--border);}
+  th:first-child,td:first-child{text-align:left;}
+  thead th{font-size:12.5px;font-weight:700;color:var(--muted);text-transform:uppercase;
+    letter-spacing:0.03em;border-bottom:1.5px solid var(--border-strong);}
+  tbody tr:last-child td{border-bottom:none;}
+  .yes{color:var(--green);font-weight:800;} .no{color:#c2ccd1;font-weight:700;} .part{color:var(--orange);font-weight:800;}
+  .rowname b{color:var(--ink);font-weight:600;} thead .ad{color:var(--teal);font-weight:800;}
+  .matrix .last td{background:var(--teal-soft);}
+
+  /* result mini stats */
+  .wins{display:flex;flex-direction:column;gap:11px;margin-top:10px;}
+  .win-row{display:flex;gap:13px;align-items:baseline;}
+  .win-row .m{flex:0 0 96px;font-size:27px;font-weight:800;color:var(--teal);letter-spacing:-0.01em;
+    text-align:right;line-height:1;}
+  .win-row .d{font-size:14.5px;line-height:1.34;color:#27343a;}
+  .win-row .d b{color:var(--ink);}
+
+  /* when to use */
+  .use{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:11px;}
+  .use .box{border-radius:13px;padding:12px 14px;font-size:13.6px;line-height:1.4;}
+  .use .yesbox{background:#1160490d;border:1px solid #11604926;}
+  .use .nobox{background:#bf57000d;border:1px solid #bf570026;}
+  .use h3{font-size:12.8px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;}
+  .use .yesbox h3{color:var(--green);} .use .nobox h3{color:var(--orange);}
+  .use ul{list-style:none;display:flex;flex-direction:column;gap:6px;}
+  .use li{padding-left:17px;position:relative;color:#27343a;}
+  .use .yesbox li::before{content:"✓";position:absolute;left:0;color:var(--green);font-weight:800;}
+  .use .nobox li::before{content:"→";position:absolute;left:0;color:var(--orange);font-weight:800;}
+
+  /* ---------- FOOTER STRIP ---------- */
+  footer{flex:0 0 auto;display:flex;align-items:center;gap:36px;
+    border-top:2px solid var(--teal-line);padding-top:15px;}
+  .f-links{flex:0 0 auto;display:flex;flex-direction:column;gap:7px;}
+  .link{display:flex;align-items:center;gap:9px;font-size:15px;}
+  .link .lbl{font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+    color:var(--faint);width:44px;flex:0 0 auto;}
+  .link a{font-family:var(--mono);font-size:14.5px;color:var(--teal);font-weight:600;}
+  .f-mid{flex:1 1 auto;display:flex;flex-direction:column;gap:8px;}
+  .badges{display:flex;flex-wrap:wrap;gap:8px;}
+  .badge{font-size:12.5px;font-weight:600;color:var(--teal);background:var(--teal-soft);
+    border:1px solid var(--teal-line);border-radius:999px;padding:5px 12px;}
+  .disclosure{font-size:11.8px;color:var(--faint);line-height:1.38;}
+  .disclosure b{color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="poster">
+
+  <!-- ===================== HEADER ===================== -->
+  <header>
+    <img class="brandmark" src="{{HUMEMAI_LOGO}}" alt="HumemAI">
+    <div class="head-titles">
+      <div class="head-top">
+        <span class="chip">SciPy 2026</span>
+        <span class="chip ghost">Multi-model data in Python</span>
+      </div>
+      <h1>ArcadeDB in Python: <span class="accent">An In-Process Multi-Model Database</span></h1>
+      <div class="byline"><b>Taewoon Kim</b><span class="sep">|</span>HumemAI<span class="sep">|</span>taewoon.kim</div>
+    </div>
+    <div class="head-right">
+      <img class="arcade" src="{{ARCADE_LOGO}}" alt="arcadedb-embedded">
+      <div class="install"><span class="pip">pip install</span> arcadedb-embedded</div>
+    </div>
+  </header>
+
+  <!-- ===================== BODY ===================== -->
+  <div class="body">
+
+    <!-- ---------- COLUMN A : PROBLEM / IDEA / ARCHITECTURE ---------- -->
+    <div class="col">
+      <div class="card tint">
+        <span class="eyebrow orange">The problem</span>
+        <p class="lede">Scientific Python increasingly mixes <b>three</b> kinds of data access over the
+          <i>same</i> data — records (SQL), relationships (graph), similarity over embeddings (vectors).
+          Today that means <span class="hlo">three separate systems + custom ETL + hand-kept consistency.</span></p>
+      </div>
+
+      <div class="arrow">↓</div>
+
+      <div class="card" style="flex:1 1 auto;">
+        <span class="eyebrow">The idea · the contribution</span>
+        <h2>One embedded engine, in-process, one <span class="mono">pip install</span></h2>
+        <p>Documents, a property graph, and HNSW vectors in <span class="hl">one process, one file-backed
+          database, one transaction</span> — no server. Engine = <b>ArcadeDB</b> (Apache-2.0 Java, credited);
+          our contribution is the <b>Python binding</b>: JPype in-process JVM + NumPy/pandas API + a
+          <b>bundled per-platform JRE → 20 wheels, no Java to install</b>.</p>
+        <div class="arch-in">
+          <img src="{{ARCH_IMG}}" alt="architecture">
+          <div class="arch-cap">A Java engine sealed inside a Python wheel: one process hosts an in-process
+            JVM (via JPype) running ArcadeDB over a local file-backed DB; documents/SQL, property graph
+            (Cypher) and HNSW vectors reached through <b>one handle</b>. Wheel ≈75 MB, plain
+            <span class="mono" style="color:var(--teal)">pip install</span>.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------- COLUMN B : HYBRID HERO ---------- -->
+    <div class="col">
+      <div class="card hero">
+        <span class="eyebrow">★ The payoff — one workflow, three models</span>
+        <h2>Hybrid retrieval: vector → SQL → graph, one transaction</h2>
+        <p style="margin-top:6px;">Given a seed question, find semantically similar ones, keep the
+          well-scored, return their best answers with each author's reputation. <b>Identifiers flow
+          directly between steps — no serialization, no ETL, no second system.</b></p>
+
+        <div class="hero-row">
+          <div class="hybrid-img"><img src="{{HYBRID_IMG}}" alt="hybrid workflow"></div>
+<pre><span class="c"># 1) VECTOR — questions similar to a seed</span>
+cands = db.query(<span class="s">"sql"</span>,
+  <span class="s">"... expand(vectorNeighbors(?,?,?,?)) ..."</span>,
+  <span class="s">"Question[embedding]"</span>, seed, <span class="k">200</span>, <span class="k">100</span>).to_list()
+
+<span class="c"># 2) SQL — keep well-scored (ids from step 1)</span>
+filt = db.query(<span class="s">"sql"</span>,
+  <span class="f">f</span><span class="s">"... WHERE id IN {ids} AND score &gt;= 1 ..."</span>).to_list()
+
+<span class="c"># 3) GRAPH — MATCH to answers + reputation</span>
+hits = db.query(<span class="s">"sql"</span>,
+  <span class="f">f</span><span class="s">"... MATCH {{Question id IN {fids}}}</span>
+<span class="s">    -HAS_ANSWER-&gt;{{Answer}}-AUTHORED_BY-&gt;{{Userx}} ..."</span>).to_list()</pre>
+        </div>
+
+        <div class="statline">
+          <div class="big">≈130&nbsp;ms</div>
+          <div class="sub">warm end-to-end over all <b>213,761 questions</b> + 208,986 answers.
+            &nbsp;<b>1 process · 1 transaction · 0 ETL</b> &nbsp;(vector 81 · SQL 17 · graph 31 ms)</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <table class="matrix">
+          <caption>Capability matrix — only the multi-model engine covers all three in one process
+            (<span class="yes">✓</span>&nbsp;native&nbsp; <span class="part">~</span>&nbsp;partial&nbsp;
+            <span class="no">✗</span>&nbsp;absent). A composable stack can reproduce it only with separate
+            systems + glue.</caption>
+          <thead><tr><th>Capability</th><th>SQLite</th><th>DuckDB</th><th>Ladybug</th><th>Chroma</th><th class="ad">Arcade</th></tr></thead>
+          <tbody>
+            <tr><td class="rowname"><b>Documents / OLTP SQL</b></td><td class="yes">✓</td><td class="part">~</td><td class="no">✗</td><td class="no">✗</td><td class="yes">✓</td></tr>
+            <tr><td class="rowname"><b>Property graph + Cypher</b></td><td class="no">✗</td><td class="no">✗</td><td class="yes">✓</td><td class="no">✗</td><td class="yes">✓</td></tr>
+            <tr><td class="rowname"><b>HNSW vector search</b></td><td class="no">✗</td><td class="no">✗</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr class="last"><td class="rowname"><b>All three in one engine</b></td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="yes">✓</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ---------- COLUMN C : RESULTS ---------- -->
+    <div class="col">
+      <div class="card">
+        <span class="eyebrow green">Honest results — vs specialist embedded peers</span>
+        <h2 style="margin-bottom:2px;">Fast where it's designed to be</h2>
+        <div class="wins">
+          <div class="win-row"><div class="m">24–31×</div><div class="d"><b>Tabular OLTP throughput</b>
+            vs SQLite &amp; DuckDB (≈5,355 vs ≈175–230 ops/s).</div></div>
+          <div class="win-row"><div class="m">≈7×</div><div class="d"><b>Graph OLTP throughput</b>
+            vs LadybugDB (≈3,480 vs ≈490 ops/s).</div></div>
+          <div class="win-row"><div class="m">0.95</div><div class="d"><b>Vector recall@10</b> at matched
+            HNSW (Chroma 0.97) — competitive <i>while</i> multi-model, with <b>lower peak memory</b>
+            (17.3 vs 25.2&nbsp;GiB, disk-backed index).</div></div>
+        </div>
+      </div>
+
+      <div class="card tint">
+        <span class="eyebrow orange">…and where it isn't (we don't hide it)</span>
+        <p style="margin-top:7px;">Specialists win <b>heavy analytics</b>: DuckDB ≈9 ms vs ≈1,180 ms
+          (tabular OLAP); LadybugDB ≈77 ms vs ≈844 ms (graph, a <b>GAV</b> narrows the gap). The standing
+          cost is <span class="hlo">memory</span> — a JVM baseline (≈930 MiB tabular) above the lean C peers;
+          startup is sub-second, with an occasional GC tail. But these gaps are a
+          <span class="hl">moving target</span>: ArcadeDB ships ~monthly and the binding packages each
+          release, so Python benefits automatically.</p>
+      </div>
+
+      <div class="use">
+        <div class="box yesbox">
+          <h3>Use it when</h3>
+          <ul>
+            <li>local, reproducible, in-process work</li>
+            <li>&gt;1 model over the <i>same</i> data</li>
+            <li>RAG / KB prototypes, teaching</li>
+            <li>"one <span class="mono">pip install</span>" matters</li>
+          </ul>
+        </div>
+        <div class="box nobox">
+          <h3>Reach past it when</h3>
+          <ul>
+            <li>one model dominates at scale</li>
+            <li>warehouse columnar scans → DuckDB</li>
+            <li>high-QPS vector serving</li>
+            <li>hard real-time latency SLAs</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== FOOTER STRIP ===================== -->
+  <footer>
+    <div class="f-links">
+      <div class="link"><span class="lbl">Code</span><a>github.com/humemai/arcadedb-embedded-python</a></div>
+      <div class="link"><span class="lbl">Docs</span><a>docs.humem.ai/arcadedb</a></div>
+    </div>
+    <div class="f-mid">
+      <div class="badges">
+        <span class="badge">Apache-2.0</span><span class="badge">20 wheels · Py 3.10–3.14</span>
+        <span class="badge">matched-param benchmark</span><span class="badge">pinned versions + run manifest</span>
+        <span class="badge">datasets open</span>
+      </div>
+      <div class="disclosure"><b>Reproducible end to end.</b> Benchmarks: Cross Validated
+        (stats.stackexchange.com) corpus, CC BY-SA; ArcadeDB 26.6.1, DuckDB 1.5.4, SQLite 3.46.1,
+        LadybugDB 0.15.3, Chroma 1.5.9; 8-core cap. GenAI assisted language editing; all content reviewed &amp; verified by the author.</div>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
