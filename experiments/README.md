@@ -90,14 +90,14 @@ vs arcadedb 59ms + faster bulk load. On-thesis (OLTP-first vs OLAP-optimized).
 ### All three lanes validated (laptop, tiny) — coherent story
 
 ArcadeDB: competitive vector recall; **wins OLTP** (tabular ~12×, graph ~4×); loses OLAP to the
-specialists (DuckDB/SQLite ~25×, Kùzu 7×). Honest, no cherry-picking.
+specialists (DuckDB/SQLite ~25×, LadybugDB 7×). Honest, no cherry-picking.
 
 ### Full suite orchestrated — validated (laptop, tiny, 2 reps)
 
 `run.py --datasets tiny --reps 2 --lanes vector,tabular,graph` ran all 12 cells × 2 reps = 24
 runs clean, capped (cpuset 0-7, 8g) with memory tracking → `runs.csv` (24 rows), `manifest.json`,
 `ENV.md`, 24 `mem/*.csv`. Memory tradeoff quantified: ArcadeDB (JVM) ~440-700 MiB vs
-SQLite ~63 / DuckDB ~107 / Kùzu ~210 / Chroma ~560 MiB.
+SQLite ~63 / DuckDB ~107 / LadybugDB ~210 / Chroma ~560 MiB.
 
 **Harness complete.** Remaining = (1) `prepare.py` for small + medium (tabular/graph need their
 `prepared/` parquet; vector already has all three), (2) move to mini: clone repo, build images,
@@ -106,7 +106,7 @@ rsync data, run official `--reps 5 --datasets tiny,small,medium`.
 ### Real remaining work (everything else is reuse)
 
 - **Chroma** vector adapter (load the existing `.f32` vectors; recall@k vs `gt.jsonl`).
-- **Kùzu** graph adapter + graph workload.
+- **LadybugDB** graph adapter + graph workload.
 - **Clean, trimmed runner** for our 4 lanes × small scale × 5 reps (drop server backends + the
   sprawling matrix) — this is the "fit SciPy" repackaging.
 - Wire recall@k to the existing `gt.jsonl`; quiet JVM INFO logs.
@@ -119,7 +119,7 @@ data-model lane, plus vector build/search with honest recall@k.
 | Lane | Systems | Workloads |
 |---|---|---|
 | Tabular | SQLite, DuckDB, ArcadeDB | OLTP × OLAP |
-| Graph | Kùzu, ArcadeDB | OLTP × OLAP |
+| Graph | LadybugDB, ArcadeDB | OLTP × OLAP |
 | Vector (HNSW) | Chroma, ArcadeDB (+ Faiss/bruteforce exact baseline) | build + search, recall@k |
 
 ## Protocol

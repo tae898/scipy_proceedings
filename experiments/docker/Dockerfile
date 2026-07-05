@@ -3,8 +3,16 @@
 # arcadedb-embedded bundles its own JRE, so no Java install is needed.
 FROM python:3.12-slim
 
-ARG PIP_PACKAGES="arcadedb-embedded>=26.8.1  # TODO: pin exact version once the perf-fix release (to_json_list, new_edges, run_in_transaction) is on PyPI numpy"
-RUN if [ -n "${PIP_PACKAGES}" ]; then pip install --no-cache-dir ${PIP_PACKAGES}; fi
+ARG PIP_PACKAGES=""
+# Local wheels (e.g. a not-yet-released arcadedb-embedded) placed in
+# docker/wheels/ are installed first; the dir ships empty (.gitkeep).
+COPY docker/wheels/ /tmp/wheels/
+RUN set -e; \
+    if ls /tmp/wheels/*.whl >/dev/null 2>&1; then \
+      pip install --no-cache-dir /tmp/wheels/*.whl; \
+    fi; \
+    if [ -n "${PIP_PACKAGES}" ]; then pip install --no-cache-dir ${PIP_PACKAGES}; fi; \
+    rm -rf /tmp/wheels
 
 WORKDIR /work
 # Scripts are mounted at run time (-v) so we can iterate without rebuilding.

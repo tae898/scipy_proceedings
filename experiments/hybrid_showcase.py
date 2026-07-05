@@ -10,7 +10,7 @@ retrieval workflow that mixes:
   3. CYPHER  — graph-traverse to their answers + answerers' reputation
 
 No single Python-embeddable alternative can express all three over the same data in one
-process (SQLite=no graph/vector; DuckDB=no Cypher/OLTP; Kùzu=graph+vector, no SQL/document;
+process (SQLite=no graph/vector; DuckDB=no Cypher/OLTP; LadybugDB=graph+vector, no SQL/document;
 Chroma=vector only). Based on the tested patterns in examples/13_*hybrid*.
 
 Usage: python hybrid_showcase.py --data-dir /data/<name>/prepared \

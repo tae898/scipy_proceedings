@@ -25,8 +25,9 @@ from xml.etree import ElementTree as ET
 import pandas as pd
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-EXAMPLES_DATA = os.path.abspath(os.path.join(
-    HERE, "..", "..", "..", "..", "bindings", "python", "examples", "data"))
+# BENCH_DATA (same env var run.py uses) overrides the default repo-layout guess.
+EXAMPLES_DATA = os.path.abspath(os.environ.get("BENCH_DATA", os.path.join(
+    HERE, "..", "..", "..", "..", "bindings", "python", "examples", "data")))
 
 _TAG = re.compile(r"<[^>]+>")
 _WS = re.compile(r"\s+")
