@@ -346,7 +346,7 @@ captured in a manifest for reproducibility. Runs were executed on a single host:
 Intel Core i9-12900HK (20 logical cores, of which 8 were exposed to each container via
 `--cpuset-cpus 0-7`), 61 GiB usable RAM, a Samsung 980 PRO 2 TB NVMe SSD (PCIe 4.0) holding
 the databases and datasets, Linux kernel 7.0.0 (x86-64), and Docker 29.5.3. Engine and
-competitor versions were pinned: ArcadeDB (`arcadedb-embedded`) 26.8.1, DuckDB 1.5.4, SQLite
+competitor versions were pinned: ArcadeDB (`arcadedb-embedded`) 26.7.2, DuckDB 1.5.4, SQLite
 3.46.1, LadybugDB (`real_ladybug`) 0.15.3, Chroma 1.5.9. Embeddings are 384-dimensional
 (`all-MiniLM-L6-v2`).
 
