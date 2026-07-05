@@ -1,5 +1,5 @@
 # Generic benchmark image. Pin the package set via build ARG so each backend
-# (arcadedb, duckdb, kuzu, chroma, faiss, ...) gets its own pinned image later.
+# (arcadedb, duckdb, ladybug, chroma, faiss, ...) gets its own pinned image later.
 # arcadedb-embedded bundles its own JRE, so no Java install is needed.
 FROM python:3.12-slim
 

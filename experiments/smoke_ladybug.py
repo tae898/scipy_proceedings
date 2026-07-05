@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
-"""Smoke test: Kùzu (graph comparator; embedded, Cypher, in-process)."""
+"""Smoke test: LadybugDB (graph comparator; embedded, Cypher, in-process).
+
+LadybugDB is the maintained continuation of the Kùzu project (package
+`real_ladybug`, Kùzu-compatible API).
+"""
 import platform
 import tempfile
 import time
 
-import kuzu
+import real_ladybug as lb
 
-print(f"kuzu {kuzu.__version__} | Python {platform.python_version()} | {platform.machine()}")
+print(f"ladybug {lb.__version__} | Python {platform.python_version()} | {platform.machine()}")
 
-path = tempfile.mkdtemp(prefix="smoke_kuzu_") + "/db"
-db = kuzu.Database(path)
-conn = kuzu.Connection(db)
+path = tempfile.mkdtemp(prefix="smoke_ladybug_") + "/db"
+db = lb.Database(path)
+conn = lb.Connection(db)
 
 conn.execute("CREATE NODE TABLE Person(id INT64, name STRING, PRIMARY KEY(id))")
 conn.execute("CREATE REL TABLE Knows(FROM Person TO Person)")

@@ -15,7 +15,7 @@ Multi-Model Database"). The paper lives in `scipy_proceedings/papers/taewoon_kim
 | arcadedb-embedded | `arcadedb-embedded==26.6.1` | 26.6.1 | our system (tabular+graph+vector) |
 | SQLite | stdlib | 3.46.1 | tabular OLTP |
 | DuckDB | `duckdb` | 1.5.4 | tabular OLAP |
-| Kùzu | `kuzu` | 0.11.3 | graph |
+| LadybugDB | `real_ladybug` | 0.15.3 | graph (continuation of Kùzu) |
 | Chroma | `chromadb` | 1.5.9 | vector (HNSW) |
 | Faiss | `faiss-cpu` | 1.14.3 | exact recall baseline |
 
@@ -80,10 +80,11 @@ sqlite 4.1ms / arcadedb 81ms. On-thesis: OLTP-first vs analytics-oriented.
 
 ### Graph lane — validated (tiny)
 
-`graph_bench.py --backend {kuzu,arcadedb} --workload {oltp,olap}`. Graph:
+`graph_bench.py --backend {ladybug,arcadedb} --workload {oltp,olap}`. Graph:
 (User)-[:POSTED]->(Post), (Post)-[:ANSWERS]->(Post); edges filtered to existing endpoints.
-Shared Cypher (ints embedded). Kùzu loads via COPY (idiomatic bulk); ArcadeDB via transactional
-CREATE. tiny: ArcadeDB OLTP 3827 ops/s (vs kuzu 1006), write 0.29ms vs 5.3ms; Kùzu OLAP 8.5ms
+Shared Cypher (ints embedded). LadybugDB loads via COPY (idiomatic bulk); ArcadeDB via
+transactional CREATE. tiny (validated on the pre-fork Kùzu 0.11.3; lane unchanged under
+LadybugDB): ArcadeDB OLTP 3827 ops/s (vs 1006), write 0.29ms vs 5.3ms; graph OLAP 8.5ms
 vs arcadedb 59ms + faster bulk load. On-thesis (OLTP-first vs OLAP-optimized).
 
 ### All three lanes validated (laptop, tiny) — coherent story
@@ -138,7 +139,7 @@ data-model lane, plus vector build/search with honest recall@k.
 experiments/
   README.md            # this file
   datasets/            # download + prep scripts (small/medium)
-  backends/            # one adapter per system: arcadedb, sqlite, duckdb, kuzu, chroma, exact
+  backends/            # one adapter per system: arcadedb, sqlite, duckdb, ladybug, chroma, exact
   workloads/           # tabular_oltp, tabular_olap, graph_oltp, graph_olap, vector
   docker/              # per-backend Dockerfiles / pinned images
   run.py               # orchestrator: 5 reps, isolation, env capture → results/*.csv
