@@ -176,7 +176,7 @@
           <img src="{{ARCH_IMG}}" alt="architecture">
           <div class="arch-cap">A Java engine sealed inside a Python wheel: one process hosts an in-process
             JVM (via JPype) running ArcadeDB over a local file-backed DB; documents/SQL, property graph
-            (Cypher) and HNSW vectors reached through <b>one handle</b>. Wheel ≈75 MB, plain
+            (Cypher) and HNSW vectors reached through <b>one handle</b>. Wheel ≈64 MB, plain
             <span class="mono" style="color:var(--teal)">pip install</span>.</div>
         </div>
       </div>
@@ -209,9 +209,9 @@ hits = db.query(<span class="s">"sql"</span>,
         </div>
 
         <div class="statline">
-          <div class="big">≈130&nbsp;ms</div>
+          <div class="big">≈103&nbsp;ms</div>
           <div class="sub">warm end-to-end over all <b>213,761 questions</b> + 208,986 answers.
-            &nbsp;<b>1 process · 1 transaction · 0 ETL</b> &nbsp;(vector 81 · SQL 17 · graph 31 ms)</div>
+            &nbsp;<b>1 process · 1 transaction · 0 ETL</b> &nbsp;(vector 92 · SQL 6 · graph 5 ms)</div>
         </div>
       </div>
 
@@ -238,20 +238,20 @@ hits = db.query(<span class="s">"sql"</span>,
         <span class="eyebrow green">Honest results — vs specialist embedded peers</span>
         <h2 style="margin-bottom:2px;">Fast where it's designed to be</h2>
         <div class="wins">
-          <div class="win-row"><div class="m">24–31×</div><div class="d"><b>Tabular OLTP throughput</b>
-            vs SQLite &amp; DuckDB (≈5,355 vs ≈175–230 ops/s).</div></div>
-          <div class="win-row"><div class="m">≈7×</div><div class="d"><b>Graph OLTP throughput</b>
-            vs LadybugDB (≈3,480 vs ≈490 ops/s).</div></div>
+          <div class="win-row"><div class="m">22–29×</div><div class="d"><b>Tabular OLTP throughput</b>
+            vs SQLite &amp; DuckDB (≈5,415 vs ≈187–242 ops/s).</div></div>
+          <div class="win-row"><div class="m">≈7.5×</div><div class="d"><b>Graph OLTP throughput</b>
+            vs LadybugDB (≈4,053 vs ≈539 ops/s).</div></div>
           <div class="win-row"><div class="m">0.95</div><div class="d"><b>Vector recall@10</b> at matched
             HNSW (Chroma 0.97) — competitive <i>while</i> multi-model, with <b>lower peak memory</b>
-            (17.3 vs 25.2&nbsp;GiB, disk-backed index).</div></div>
+            (16.7 vs 24.6&nbsp;GiB, disk-backed index).</div></div>
         </div>
       </div>
 
       <div class="card tint">
         <span class="eyebrow orange">…and where it isn't (we don't hide it)</span>
-        <p style="margin-top:7px;">Specialists win <b>heavy analytics</b>: DuckDB ≈9 ms vs ≈1,180 ms
-          (tabular OLAP); LadybugDB ≈77 ms vs ≈844 ms (graph, a <b>GAV</b> narrows the gap). The standing
+        <p style="margin-top:7px;">Specialists win <b>heavy analytics</b>: DuckDB ≈9 ms vs ≈1,310 ms
+          (tabular OLAP); LadybugDB ≈76 ms vs ≈850 ms (graph, a <b>GAV</b> narrows the gap). The standing
           cost is <span class="hlo">memory</span> — a JVM baseline (≈930 MiB tabular) above the lean C peers;
           startup is sub-second, with an occasional GC tail. But these gaps are a
           <span class="hl">moving target</span>: ArcadeDB ships ~monthly and the binding packages each
@@ -294,7 +294,7 @@ hits = db.query(<span class="s">"sql"</span>,
         <span class="badge">datasets open</span>
       </div>
       <div class="disclosure"><b>Reproducible end to end.</b> Benchmarks: Cross Validated
-        (stats.stackexchange.com) corpus, CC BY-SA; ArcadeDB 26.6.1, DuckDB 1.5.4, SQLite 3.46.1,
+        (stats.stackexchange.com) corpus, CC BY-SA; ArcadeDB 26.8.1, DuckDB 1.5.4, SQLite 3.46.1,
         LadybugDB 0.15.3, Chroma 1.5.9; 8-core cap. GenAI assisted language editing; all content reviewed &amp; verified by the author.</div>
     </div>
   </footer>
