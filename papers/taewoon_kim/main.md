@@ -174,7 +174,7 @@ Silicon, and Windows x86-64), each carrying the matching JRE, across Python 3.10
 twenty wheels in total. The user runs `pip install arcadedb-embedded` and gets a working
 multi-model database with **no Java installation, no `JAVA_HOME`, and no server**. The JVM is
 an implementation detail sealed inside the package ([](#fig-arch)). The cost is wheel size,
-about 64 MB per wheel (Linux x86-64; the other platforms are within a few MB), dominated by
+about 62 MB per wheel (Linux x86-64; the other platforms are within a few MB), dominated by
 the runtime. We keep it that small by trimming the JRE with `jlink` to only the modules the
 engine needs and bundling only the JARs required for embedded, in-process use — the package
 is embedded-only, with no bundled server. That is the price of "no Java to
@@ -491,7 +491,7 @@ itself runs at Java speed from Python (the JPype call is a direct method invocat
 measurable cost is materializing results into Python objects, which the binding's bulk paths
 keep small — ≈1.1× a pure-Java baseline for vector search and ≈1.6× for full-table scans on
 this host — so the boundary tax is paid per batch, not per row. *Packaging*: a `jlink`-trimmed JRE
-still makes each wheel ≈64 MB, paid once at install.
+still makes each wheel ≈62 MB, paid once at install.
 
 **Maturity and scope.** Beyond the three models shown, the engine and binding cover more than
 this paper exercises (additional data types and query surfaces, batch import paths, and an
