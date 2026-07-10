@@ -1,27 +1,18 @@
-# Why the experiments still pin `real_ladybug==0.15.3` (2026-07-10)
+# LadybugDB package + versions (updated 2026-07-11)
 
-The official LadybugDB package is `ladybug` (0.18.1, from LadybugDB/ladybug-python).
-`real_ladybug` is published from a different repo (lbugdb/lbug) and is frozen at
-0.15.3. We migrated the experiments to `ladybug==0.18.1`, re-ran the full 180-run
-suite on mini, and then **reverted**, because the paper reports the 2026-07-05
-numbers and must stay reproducible against the code that produced them.
+The experiments use the OFFICIAL LadybugDB package **`ladybug`** (0.18.1, from
+LadybugDB/ladybug-python). Earlier they pinned `real_ladybug` (0.15.3), which is
+published from a different repo (lbugdb/lbug) and is frozen; we switched after
+LadybugDB shipped 0.18.1.
 
-What the re-run showed (both campaigns archived under results/archive_*):
+Versions pinned (all on PyPI):
+- ArcadeDB: `arcadedb-embedded==26.7.2` (release). This also corrects an earlier
+  paper misstatement: the 2026-07-05 run actually used `26.8.1.dev0` (upstream's
+  pom said 26.8.1-SNAPSHOT at build time; that line was later renamed and
+  released as 26.7.2), while the paper stated 26.7.2. Re-measured on the real
+  26.7.2 release so the text is now true.
+- LadybugDB: `ladybug==0.18.1`.
+- DuckDB 1.5.4, SQLite 3.46.1, Chroma 1.5.9 (unchanged).
 
-| graph, medium (Cross Validated) | published 0.15.3 | ladybug 0.18.1 | delta |
-|---|---|---|---|
-| ladybug OLTP ops/s | 538.6 ± 4.6 | 532.6 ± 13.4 | -1.1% (noise) |
-| ladybug OLAP total ms | 76.0 ± 1.0 | 66.4 ± 0.8 | **-12.5% (real)** |
-| arcadedb OLTP ops/s | 4052.8 ± 367.6 | 3858.3 ± 271.5 | -4.8% |
-| ArcadeDB/Ladybug ratio | 7.53x | 7.24x | |
-
-Noise floor: SQLite and DuckDB ran identical versions in both campaigns and still
-moved -3.3% / -4.4%, so anything under ~5% is run-to-run variance. LadybugDB's
-graph OLAP gain is above that band and is genuine.
-
-Known inaccuracy in the published paper, left as-is by author decision: the run
-actually used `arcadedb-embedded 26.8.1.dev0` (upstream's pom said 26.8.1-SNAPSHOT
-at the time; that line was later renamed and released as 26.7.2), while the paper
-states 26.7.2.
-
-If these numbers are ever refreshed, migrate to `ladybug` and re-measure together.
+The paper and poster were re-measured on mini and updated to these versions and
+numbers (2026-07-11). Prior campaigns archived under results/archive_*.

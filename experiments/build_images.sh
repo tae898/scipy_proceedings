@@ -7,10 +7,10 @@ cd "$(dirname "$0")"
 # ARCADEDB_WHEEL=/path/to/arcadedb_embedded-*.whl uses that local wheel for the
 # arcadedb image instead of the PyPI release (pin exact PyPI version otherwise).
 declare -A PKGS=(
-  [arcadedb]="arcadedb-embedded==26.7.2.dev0 numpy pandas pyarrow"
+  [arcadedb]="arcadedb-embedded==26.7.2 numpy pandas pyarrow"
   [sqlite]="pandas pyarrow"
   [duckdb]="duckdb==1.5.4 pandas pyarrow"
-  [ladybug]="real_ladybug==0.15.3 pandas pyarrow"
+  [ladybug]="ladybug==0.18.1 pandas pyarrow"
   [chroma]="chromadb==1.5.9 numpy"
 )
 
