@@ -15,7 +15,7 @@ Multi-Model Database"). The paper lives in `scipy_proceedings/papers/taewoon_kim
 | arcadedb-embedded | `arcadedb-embedded==26.6.1` | 26.6.1 | our system (tabular+graph+vector) |
 | SQLite | stdlib | 3.46.1 | tabular OLTP |
 | DuckDB | `duckdb` | 1.5.4 | tabular OLAP |
-| LadybugDB | `real_ladybug` | 0.15.3 | graph (continuation of Kùzu) |
+| LadybugDB | `ladybug` | 0.18.1 | graph (continuation of Kùzu) |
 | Chroma | `chromadb` | 1.5.9 | vector (HNSW) |
 | Faiss | `faiss-cpu` | 1.14.3 | exact recall baseline |
 
