@@ -10,7 +10,7 @@ BACKENDS=(
   "arcadedb:arcadedb-embedded==26.7.2.dev0 numpy:smoke_arcadedb.py"
   "sqlite::smoke_sqlite.py"
   "duckdb:duckdb:smoke_duckdb.py"
-  "ladybug:ladybug==0.18.1:smoke_ladybug.py"
+  "ladybug:real_ladybug==0.15.3:smoke_ladybug.py"
   "chroma:chromadb numpy:smoke_chroma.py"
   "faiss:faiss-cpu numpy:smoke_faiss.py"
 )

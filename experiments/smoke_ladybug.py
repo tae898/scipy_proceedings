@@ -2,13 +2,13 @@
 """Smoke test: LadybugDB (graph comparator; embedded, Cypher, in-process).
 
 LadybugDB is the maintained continuation of the Kùzu project (package
-`ladybug`, Kùzu-compatible API).
+`real_ladybug`, Kùzu-compatible API).
 """
 import platform
 import tempfile
 import time
 
-import ladybug as lb
+import real_ladybug as lb
 
 print(f"ladybug {lb.__version__} | Python {platform.python_version()} | {platform.machine()}")
 
