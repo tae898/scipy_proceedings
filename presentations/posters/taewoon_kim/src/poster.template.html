@@ -238,20 +238,20 @@ hits = db.query(<span class="s">"sql"</span>,
         <span class="eyebrow green">Honest results — vs specialist embedded peers</span>
         <h2 style="margin-bottom:2px;">Fast where it's designed to be</h2>
         <div class="wins">
-          <div class="win-row"><div class="m">22–29×</div><div class="d"><b>Tabular OLTP throughput</b>
-            vs SQLite &amp; DuckDB (≈5,415 vs ≈187–242 ops/s).</div></div>
-          <div class="win-row"><div class="m">≈7.5×</div><div class="d"><b>Graph OLTP throughput</b>
-            vs LadybugDB (≈4,053 vs ≈539 ops/s).</div></div>
+          <div class="win-row"><div class="m">22–28×</div><div class="d"><b>Tabular OLTP throughput</b>
+            vs SQLite &amp; DuckDB (≈5,250 vs ≈186–241 ops/s).</div></div>
+          <div class="win-row"><div class="m">≈6.6×</div><div class="d"><b>Graph OLTP throughput</b>
+            vs LadybugDB (≈3,504 vs ≈527 ops/s).</div></div>
           <div class="win-row"><div class="m">0.95</div><div class="d"><b>Vector recall@10</b> at matched
             HNSW (Chroma 0.97) — competitive <i>while</i> multi-model, with <b>lower peak memory</b>
-            (16.7 vs 24.6&nbsp;GiB, disk-backed index).</div></div>
+            (16.8 vs 24.6&nbsp;GiB, disk-backed index).</div></div>
         </div>
       </div>
 
       <div class="card tint">
         <span class="eyebrow orange">…and where it isn't (we don't hide it)</span>
         <p style="margin-top:7px;">Specialists win <b>heavy analytics</b>: DuckDB ≈9 ms vs ≈1,310 ms
-          (tabular OLAP); LadybugDB ≈76 ms vs ≈850 ms (graph, a <b>GAV</b> narrows the gap). The standing
+          (tabular OLAP); LadybugDB ≈66 ms vs ≈800 ms (graph, a <b>GAV</b> narrows the gap). The standing
           cost is <span class="hlo">memory</span> — a JVM baseline (≈930 MiB tabular) above the lean C peers;
           startup is sub-second, with an occasional GC tail. But these gaps are a
           <span class="hl">moving target</span>: ArcadeDB ships ~monthly and the binding packages each
@@ -295,7 +295,7 @@ hits = db.query(<span class="s">"sql"</span>,
       </div>
       <div class="disclosure"><b>Reproducible end to end.</b> Benchmarks: Cross Validated
         (stats.stackexchange.com) corpus, CC BY-SA; ArcadeDB 26.7.2, DuckDB 1.5.4, SQLite 3.46.1,
-        LadybugDB 0.15.3, Chroma 1.5.9; 8-core cap. GenAI assisted language editing; all content reviewed &amp; verified by the author.</div>
+        LadybugDB 0.18.1, Chroma 1.5.9; 8-core cap. GenAI assisted language editing; all content reviewed &amp; verified by the author.</div>
     </div>
   </footer>
 
