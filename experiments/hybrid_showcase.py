@@ -126,7 +126,7 @@ def main():
 
         def batch_edges(pairs):
             with db.graph_batch(batch_size=max(1, len(pairs)), expected_edge_count=max(1, len(pairs)),
-                                bidirectional=True, commit_every=max(1, len(pairs)),  # Cypher needs reverse adjacency: its planner may expand patterns in reverse, silently returning 0 rows on unidirectional edges
+                                bidirectional=False, commit_every=max(1, len(pairs)),
                                 use_wal=False, parallel_flush=pf) as b:
                 for frm, etype, to in pairs:
                     b.new_edge(frm, etype, to)
@@ -139,6 +139,17 @@ def main():
         answered = [(arid[int(r.id)], "AUTHORED_BY", urid[int(r.owner_user_id)]) for r in a.itertuples(index=False)
                     if pd.notna(r.owner_user_id) and int(r.owner_user_id) in urid]
         batch_edges(asked); batch_edges(has_ans); batch_edges(answered)
+        # GAV: materializes the reverse topology, making OpenCypher both correct
+        # over unidirectional edges and fast (same accelerator the graph lane uses).
+        db.command("sql", "CREATE GRAPH ANALYTICAL VIEW gav "
+                   "VERTEX TYPES (Question, Answer, Userx) "
+                   "EDGE TYPES (ASKED, HAS_ANSWER, AUTHORED_BY) "
+                   "PROPERTIES (id) UPDATE MODE OFF")
+        while True:
+            row = db.query("sql", "SELECT FROM schema:graphAnalyticalViews WHERE name = ?", "gav").first()
+            if row and str(row.get("status", "")) in ("READY", "AVAILABLE"):
+                break
+            time.sleep(0.5)
         build_s = time.time() - t_build
 
         # ===================== THE HYBRID WORKFLOW =====================
@@ -173,9 +184,9 @@ def main():
                 f"AND score >= {args.score_min} ORDER BY score DESC LIMIT {args.sql_keep}").to_list()
             stime = time.time() - t
             _d(f"sql done ({len(filt)} kept); graph start")
-            # 3) CYPHER: traverse to answers + answerers' reputation via OpenCypher.
-            # (Earlier revisions used ArcadeDB's SQL MATCH as a workaround for a
-            #  multi-edge + IN-list Cypher issue no longer reproducible on 26.8.x.)
+            # 3) CYPHER: traverse to answers + answerers' reputation via OpenCypher,
+            # GAV-accelerated (without the GAV, the Cypher planner may expand the
+            # pattern in reverse and silently return 0 rows on unidirectional edges).
             fids = "[" + ",".join(str(int(r["id"])) for r in filt) + "]"
             t = time.time()
             hits = db.query("cypher",
@@ -186,24 +197,35 @@ def main():
                 f"usr.reputation AS rep "
                 f"ORDER BY ascore DESC LIMIT {args.topk}").to_list()
             gt = time.time() - t
-            return vt, stime, gt, cands, filt, hits
+            # same traversal via ArcadeDB's native SQL MATCH (second graph surface)
+            t = time.time()
+            hits_m = db.query("sql",
+                f"SELECT qid, aid, ascore, rep FROM ( MATCH "
+                f"{{type:Question, as:q, where:(id IN {fids})}}-HAS_ANSWER->"
+                f"{{type:Answer, as:ans}}-AUTHORED_BY->{{type:Userx, as:usr}} "
+                f"RETURN q.id AS qid, ans.id AS aid, ans.score AS ascore, "
+                f"usr.reputation AS rep ) ORDER BY ascore DESC LIMIT {args.topk}").to_list()
+            mt = time.time() - t
+            assert len(hits_m) == len(hits), f"cypher/MATCH disagree: {len(hits)} vs {len(hits_m)}"
+            return vt, stime, gt, mt, cands, filt, hits
 
         # warm up (untimed) so we report steady-state latency, not a single cold run
         for i in range(args.warmup):
-            vt, stime, gt, *_ = run_once()
+            vt, stime, gt, mt, *_ = run_once()
             print(f"[warmup {i+1}/{args.warmup}] vec={vt*1000:.1f} sql={stime*1000:.1f} "
                   f"graph={gt*1000:.1f} ms", flush=True)
-        vs, ss, gs, ts = [], [], [], []
+        vs, ss, gs, ms, ts = [], [], [], [], []
         for i in range(args.query_reps):
-            vt, stime, gt, cands, filt, hits = run_once()
+            vt, stime, gt, mt, cands, filt, hits = run_once()
             vs.append(vt * 1000); ss.append(stime * 1000); gs.append(gt * 1000)
+            ms.append(mt * 1000)
             ts.append((vt + stime + gt) * 1000)
             print(f"[rep {i+1}/{args.query_reps}] vec={vt*1000:.1f} sql={stime*1000:.1f} "
                   f"graph={gt*1000:.1f} ms", flush=True)
 
         def stat(arr):
             return round(st.mean(arr), 2), round(st.pstdev(arr) if len(arr) > 1 else 0.0, 2)
-        vm, vsd = stat(vs); sm, ssd = stat(ss); gm, gsd = stat(gs); tm, tsd = stat(ts)
+        vm, vsd = stat(vs); sm, ssd = stat(ss); gm, gsd = stat(gs); mm, msd = stat(ms); tm, tsd = stat(ts)
         result = {
             "showcase": "vector->sql->cypher", "dataset": args.name,
             "lib_version": getattr(arcadedb, "__version__", "?"),
@@ -212,6 +234,7 @@ def main():
             "build_s": round(build_s, 3), "warmup": args.warmup, "query_reps": args.query_reps,
             "vector_ms": vm, "vector_ms_std": vsd, "sql_ms": sm, "sql_ms_std": ssd,
             "graph_ms": gm, "graph_ms_std": gsd,
+            "graph_match_ms": mm, "graph_match_ms_std": msd,
             "hybrid_total_ms": tm, "hybrid_total_ms_std": tsd,
             "vec_candidates": len(cands), "sql_filtered": len(filt), "graph_hits": len(hits),
             "systems": 1, "processes": 1, "etl_steps": 0,
@@ -219,7 +242,7 @@ def main():
     print(f"\n=== Hybrid workflow (one in-process ArcadeDB; warm, {args.query_reps} reps) ===")
     print(f"  1. vector  → {len(cands)} similar questions   ({vm} ± {vsd} ms)")
     print(f"  2. sql     → {len(filt)} after Score filter    ({sm} ± {ssd} ms)")
-    print(f"  3. graph   → {len(hits)} answers+authors        ({gm} ± {gsd} ms)")
+    print(f"  3. cypher  → {len(hits)} answers+authors        ({gm} ± {gsd} ms; SQL MATCH alt: {mm} ± {msd} ms)")
     print(f"  total hybrid latency: {tm} ± {tsd} ms; build {result['build_s']}s; 1 system, 0 ETL")
     if hits:
         print(f"  sample hit: {hits[0]}")
