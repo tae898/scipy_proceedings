@@ -253,7 +253,7 @@ The interesting case is composing all three over the same data, in one process, 
 engine. Given a popular "seed" question, we answer: *find questions semantically similar to
 this one, keep the well-scored ones, and return their best answers together with the
 reputation of who wrote them.* That is vector search, then a relational filter, then a graph
-traversal: three data models, one database, one transaction ([](#fig-hybrid)).
+traversal: three data models and three query languages (a vector function in SQL, plain SQL, OpenCypher), one database, one transaction ([](#fig-hybrid)).
 
 ```python
 # 1) VECTOR — questions semantically similar to a seed
@@ -268,14 +268,14 @@ filt = db.query("sql",
     f"SELECT id, title, score FROM Question WHERE id IN {ids} "
     f"AND score >= 1 ORDER BY score DESC LIMIT 50").to_list()
 
-# 3) GRAPH — traverse to answers + answerers' reputation (MATCH)
+# 3) CYPHER — traverse to answers + answerers' reputation
 fids = "[" + ",".join(str(int(r["id"])) for r in filt) + "]"
-hits = db.query("sql",
-    f"SELECT qid, aid, ascore, rep FROM ( MATCH "
-    f"{{type:Question, as:q, where:(id IN {fids})}}-HAS_ANSWER->"
-    f"{{type:Answer, as:ans}}-AUTHORED_BY->{{type:Userx, as:usr}} "
+hits = db.query("cypher",
+    f"MATCH (q:Question)-[:HAS_ANSWER]->(ans:Answer)"
+    f"-[:AUTHORED_BY]->(usr:Userx) "
+    f"WHERE q.id IN {fids} "
     f"RETURN q.id AS qid, ans.id AS aid, ans.score AS ascore, "
-    f"usr.reputation AS rep ) ORDER BY ascore DESC LIMIT 10").to_list()
+    f"usr.reputation AS rep ORDER BY ascore DESC LIMIT 10").to_list()
 ```
 
 The seams are what matter. The vector step's output ids feed the SQL `WHERE ... IN` directly,
@@ -283,9 +283,11 @@ and the SQL step's surviving ids feed the graph traversal directly, with no seri
 copying rows between processes, no second system to keep consistent, and no ETL. Over the
 complete set of Cross Validated questions and answers (all 213,761 questions and 208,986
 answers, with the 108,101 users linked to them), the end-to-end workflow runs warm in
-**≈103 ms** (vector ≈92 ms, SQL
-≈6 ms, graph ≈5 ms; mean over 20 reps after 5 warmups, ± ≈16 ms, the residual spread
-dominated by the vector step), in a single process after a one-time bulk load. The
+**≈273 ms** (vector ≈120 ms, SQL ≈10 ms, Cypher ≈143 ms; mean over 20 reps after 5
+warmups, ± ≈45 ms). The Cypher traversal is accelerated by a Graph Analytical View;
+the same traversal through ArcadeDB's native SQL `MATCH` surface answers in ≈7 ms,
+a gap that reflects the relative maturity of the OpenCypher planner rather than the
+storage layer. All of it runs in a single process after a one-time bulk load. The
 three steps pass 200 vector candidates to the SQL filter, 50 survivors to the graph traversal,
 and return the top 10 answers. Timings were measured on the same host and 8-core cap as the
 comparison tables below.
@@ -346,7 +348,7 @@ captured in a manifest for reproducibility. Runs were executed on a single host:
 Intel Core i9-12900HK (20 logical cores, of which 8 were exposed to each container via
 `--cpuset-cpus 0-7`), 61 GiB usable RAM, a Samsung 980 PRO 2 TB NVMe SSD (PCIe 4.0) holding
 the databases and datasets, Linux kernel 7.0.0 (x86-64), and Docker 29.5.3. Engine and
-competitor versions were pinned: ArcadeDB (`arcadedb-embedded`) 26.7.2, DuckDB 1.5.4, SQLite
+competitor versions were pinned: ArcadeDB (`arcadedb-embedded`) 26.8.1.dev1, DuckDB 1.5.4, SQLite
 3.46.1, LadybugDB (`ladybug`) 0.18.1, Chroma 1.5.9. Embeddings are 384-dimensional
 (`all-MiniLM-L6-v2`).
 
@@ -361,9 +363,9 @@ nearest-neighbor queries and reports recall@10 against an exact brute-force grou
 exact query text for every lane is in the public benchmark suite.
 
 **Tabular ([](#tbl-tabular)).** The results match the engine's transactional design and are candid about the converse. On the mixed transactional workload, ArcadeDB sustains roughly
-**22–28× the throughput** of SQLite and DuckDB (≈5,250 ops/s vs ≈186 and ≈241). Point reads,
+**19–24× the throughput** of SQLite and DuckDB (≈5,430 ops/s vs ≈229 and ≈280). Point reads,
 inserts, and updates are where it shines. On analytical SQL the specialists win decisively:
-DuckDB's columnar engine answers the analytics suite in ≈9 ms versus ArcadeDB's ≈1,310 ms, and
+DuckDB's columnar engine answers the analytics suite in ≈10 ms versus ArcadeDB's ≈1,420 ms, and
 even SQLite is several times faster. ArcadeDB is not uniformly fast or slow here. It is built for transactional rather than analytical work. You would not pick it to be your analytical
 warehouse, and you would happily use it for transactional, record-oriented work alongside the
 graph and vectors.
@@ -372,15 +374,15 @@ graph and vectors.
 :label: tbl-tabular
 | Backend | OLTP ops/s | OLAP ms | Ingest s | Peak MiB | DB MiB |
 |---|--:|--:|--:|--:|--:|
-| SQLite | 186 ± 1 | 285.3 ± 0.5 | 0.32 ± 0.01 | 284 ± 4 | 20.1 |
-| DuckDB | 241 ± 1 | 9.4 ± 0.1 | 0.38 ± 0.01 | 301 ± 2 | 17.5 |
-| ArcadeDB | 5,249 ± 248 | 1,308.7 ± 28.6 | 13.94 ± 0.10 | 931 ± 85 | 38.3 |
+| SQLite | 229 ± 1 | 317.5 ± 1.8 | 0.34 ± 0.01 | 287 ± 12 | 20.1 |
+| DuckDB | 280 ± 1 | 10.2 ± 0.2 | 0.40 ± 0.00 | 306 ± 8 | 17.4 |
+| ArcadeDB | 5,431 ± 360 | 1,419.9 ± 11.1 | 14.98 ± 0.28 | 887 ± 73 | 38.3 |
 :::
 
 **Graph ([](#tbl-graph)).** The same pattern holds. On graph OLTP (neighborhood/traversal
-point operations) ArcadeDB runs ≈6.6× LadybugDB's throughput (≈3,500 vs ≈530 ops/s).
-On graph analytics the analytics-oriented LadybugDB wins (≈66 ms vs ≈800 ms). The GAV
-is worth it on its own terms (it builds in ≈1.5 s and accelerates ArcadeDB's analytical
+point operations) ArcadeDB runs ≈6.2× LadybugDB's throughput (≈3,590 vs ≈580 ops/s).
+On graph analytics the analytics-oriented LadybugDB wins (≈74 ms vs ≈870 ms). The GAV
+is worth it on its own terms (it builds in ≈1.6 s and accelerates ArcadeDB's analytical
 traversals), but it narrows rather than closes the gap to a dedicated analytical
 graph engine. There is also an on-disk cost: ArcadeDB's richly-indexed property graph occupies
 ≈19× the space of LadybugDB's columnar store (≈800 vs ≈41 MiB). Again, the summary is complementarity: transactional graph writes and point traversals here, heavy graph
@@ -390,15 +392,15 @@ analytics on a specialist.
 :label: tbl-graph
 | Backend | OLTP ops/s | OLAP ms | GAV build s | Peak MiB | DB MiB |
 |---|--:|--:|--:|--:|--:|
-| LadybugDB | 527 ± 22 | 65.8 ± 0.9 | — | 680 ± 9 | 41.4 |
-| ArcadeDB | 3,504 ± 214 | 803.2 ± 27.2 | 1.46 ± 0.10 | 4,815 ± 406 | 796.6 |
+| LadybugDB | 584 ± 9 | 73.9 ± 0.8 | — | 690 ± 10 | 41.4 |
+| ArcadeDB | 3,592 ± 264 | 869.8 ± 31.6 | 1.55 ± 0.14 | 4,667 ± 218 | 796.6 |
 :::
 
 **Vector ([](#tbl-vector)).** With HNSW parameters matched across engines, ArcadeDB is
-*competitive while being multi-model*. Build times track Chroma closely (≈341 s vs ≈304 s for
+*competitive while being multi-model*. Build times track Chroma closely (≈364 s vs ≈321 s for
 1.24 M vectors). Recall@10 is comparable (≈0.95 vs ≈0.97), and query latency is ≈4× higher
-(≈4.1 ms vs ≈1.2 ms) but still single-digit milliseconds. The notable result is memory:
-ArcadeDB's *peak* memory is **lower** than Chroma's (≈16.8 GiB vs ≈24.6 GiB), because the
+(≈4.4 ms vs ≈1.2 ms) but still single-digit milliseconds. The notable result is memory:
+ArcadeDB's *peak* memory is **lower** than Chroma's (≈17.4 GiB vs ≈25.2 GiB), because the
 engine keeps vectors on disk rather than holding the entire set resident in RAM as the
 pure-Python HNSW path does. The trade is deliberate: you give up some query
 latency relative to a dedicated vector store and get vectors that live in the same engine as
@@ -408,20 +410,20 @@ your documents and graph.
 :label: tbl-vector
 | Backend | Build s | Query ms | recall@10 | Peak MiB | DB MiB |
 |---|--:|--:|--:|--:|--:|
-| Chroma | 304.0 ± 0.6 | 1.16 ± 0.02 | 0.972 ± 0.001 | 25,232 ± 85 | 2,208 |
-| ArcadeDB | 340.6 ± 8.3 | 4.14 ± 0.07 | 0.951 ± 0.002 | 17,236 ± 118 | 2,781 |
+| Chroma | 320.7 ± 0.6 | 1.22 ± 0.02 | 0.971 ± 0.002 | 25,834 ± 504 | 2,208 |
+| ArcadeDB | 363.8 ± 6.6 | 4.40 ± 0.07 | 0.950 ± 0.002 | 17,799 ± 474 | 2,781 |
 :::
 
 Beyond the headline throughput and latency numbers, the benchmark suite isolates each
 lifecycle phase (import, JVM init, open, schema, ingest, index build, close), and two
 cross-cutting results bear on concerns a JVM-backed binding raises. First, **JVM startup is
-negligible**: isolated JVM initialization is ≈0.16 s and database open ≈0.12 s, a one-time,
+negligible**: isolated JVM initialization is ≈0.17 s and database open ≈0.14 s, a one-time,
 sub-second cost amortized over any real session, and in fact *smaller* than Chroma's Python
-import alone (≈0.37 s). The bulk of an ArcadeDB vector build is the HNSW index phase (≈311 s of
-the ≈341 s total), not startup. Second, ArcadeDB's **typical latencies are excellent**
-([](#tbl-latency)): graph point and 1-hop p99 (0.51 ms, 0.63 ms) beat LadybugDB's (1.23 ms,
-4.17 ms), and tabular read p99 (0.18 ms) beats both specialists. But the JVM shows a **tail**:
-occasional max latencies of tens of milliseconds (e.g. a 28–84 ms outlier under GC), the cost
+import alone (≈0.45 s). The bulk of an ArcadeDB vector build is the HNSW index phase (≈332 s of
+the ≈364 s total), not startup. Second, ArcadeDB's **typical latencies are excellent**
+([](#tbl-latency)): graph point and 1-hop p99 (0.48 ms, 0.60 ms) beat LadybugDB's (0.96 ms,
+3.85 ms), and tabular read p99 (0.17 ms) is on par with SQLite and beats DuckDB. But the JVM shows a **tail**:
+occasional max latencies of tens of milliseconds (e.g. a 19–87 ms outlier under GC), the cost
 of a managed runtime. For interactive and batch analytics this tail is irrelevant. For hard
 real-time serving it matters.
 
@@ -429,19 +431,19 @@ real-time serving it matters.
 :label: tbl-latency
 | Lane / op | Backend | p50 | p99 | max |
 |---|---|--:|--:|--:|
-| vector query | Chroma | 1.16 | 1.40 | 1.6 |
-| vector query | ArcadeDB | 4.12 | 6.00 | 8.8 |
-| tabular read | SQLite | 0.06 | 0.28 | 0.5 |
-| tabular read | DuckDB | 0.91 | 1.81 | 2.7 |
-| tabular read | ArcadeDB | 0.06 | 0.18 | 36.6 |
-| graph point | LadybugDB | 0.39 | 1.23 | 2.3 |
-| graph point | ArcadeDB | 0.14 | 0.51 | 28.5 |
-| graph hop | LadybugDB | 1.39 | 4.17 | 11.6 |
-| graph hop | ArcadeDB | 0.16 | 0.63 | 84.0 |
+| vector query | Chroma | 1.22 | 1.66 | 2.0 |
+| vector query | ArcadeDB | 4.38 | 6.21 | 9.0 |
+| tabular read | SQLite | 0.03 | 0.15 | 0.4 |
+| tabular read | DuckDB | 0.75 | 1.43 | 3.3 |
+| tabular read | ArcadeDB | 0.06 | 0.17 | 33.1 |
+| graph point | LadybugDB | 0.36 | 0.96 | 1.7 |
+| graph point | ArcadeDB | 0.15 | 0.48 | 18.9 |
+| graph hop | LadybugDB | 1.28 | 3.85 | 13.2 |
+| graph hop | ArcadeDB | 0.17 | 0.60 | 86.5 |
 :::
 
 **Memory is the cost.** For modest transactional and graph workloads ArcadeDB's footprint is larger than the
-lean C-based specialists (≈930 MiB vs ≈284–301 MiB on the tabular workload), the cost of a
+lean C-based specialists (≈890 MiB vs ≈287–306 MiB on the tabular workload), the cost of a
 running JVM and a general-purpose engine. The vector lane is the exception that proves the
 rule: its disk-backed index makes it *more* memory-frugal than an all-in-RAM vector library at
 scale. We report these plainly so practitioners can decide. The unified, in-process engine is
