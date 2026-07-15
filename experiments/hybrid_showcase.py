@@ -7,7 +7,7 @@ retrieval workflow that mixes:
 
   1. VECTOR  — vectorNeighbors(): questions semantically similar to a seed
   2. SQL     — filter/rank those candidates by Score
-  3. CYPHER  — graph-traverse to their answers + answerers' reputation
+  3. CYPHER — graph-traverse to their answers + answerers' reputation
 
 No single Python-embeddable alternative can express all three over the same data in one
 process (SQLite=no graph/vector; DuckDB=no Cypher/OLTP; LadybugDB=graph+vector, no SQL/document;
@@ -173,17 +173,18 @@ def main():
                 f"AND score >= {args.score_min} ORDER BY score DESC LIMIT {args.sql_keep}").to_list()
             stime = time.time() - t
             _d(f"sql done ({len(filt)} kept); graph start")
-            # 3) GRAPH: traverse to answers + answerers' reputation via ArcadeDB's SQL MATCH.
-            # (SQL MATCH, not OpenCypher: ArcadeDB OpenCypher returns 0 on a multi-edge pattern
-            #  combined with a WHERE ... IN [list] filter; SQL MATCH handles it and is GAV-accelerated.)
+            # 3) CYPHER: traverse to answers + answerers' reputation via OpenCypher.
+            # (Earlier revisions used ArcadeDB's SQL MATCH as a workaround for a
+            #  multi-edge + IN-list Cypher issue no longer reproducible on 26.8.x.)
             fids = "[" + ",".join(str(int(r["id"])) for r in filt) + "]"
             t = time.time()
-            hits = db.query("sql",
-                f"SELECT qid, aid, ascore, rep FROM ("
-                f" MATCH {{type:Question, as:q, where:(id IN {fids})}}-HAS_ANSWER->"
-                f"{{type:Answer, as:ans}}-AUTHORED_BY->{{type:Userx, as:usr}} "
-                f" RETURN q.id AS qid, ans.id AS aid, ans.score AS ascore, usr.reputation AS rep"
-                f") ORDER BY ascore DESC LIMIT {args.topk}").to_list()
+            hits = db.query("cypher",
+                f"MATCH (q:Question)-[:HAS_ANSWER]->(ans:Answer)"
+                f"-[:AUTHORED_BY]->(usr:Userx) "
+                f"WHERE q.id IN {fids} "
+                f"RETURN q.id AS qid, ans.id AS aid, ans.score AS ascore, "
+                f"usr.reputation AS rep "
+                f"ORDER BY ascore DESC LIMIT {args.topk}").to_list()
             gt = time.time() - t
             return vt, stime, gt, cands, filt, hits
 
