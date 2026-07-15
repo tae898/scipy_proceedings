@@ -126,7 +126,7 @@ def main():
 
         def batch_edges(pairs):
             with db.graph_batch(batch_size=max(1, len(pairs)), expected_edge_count=max(1, len(pairs)),
-                                bidirectional=False, commit_every=max(1, len(pairs)),
+                                bidirectional=True, commit_every=max(1, len(pairs)),  # Cypher needs reverse adjacency: its planner may expand patterns in reverse, silently returning 0 rows on unidirectional edges
                                 use_wal=False, parallel_flush=pf) as b:
                 for frm, etype, to in pairs:
                     b.new_edge(frm, etype, to)
@@ -205,7 +205,7 @@ def main():
             return round(st.mean(arr), 2), round(st.pstdev(arr) if len(arr) > 1 else 0.0, 2)
         vm, vsd = stat(vs); sm, ssd = stat(ss); gm, gsd = stat(gs); tm, tsd = stat(ts)
         result = {
-            "showcase": "vector->sql->graph(MATCH)", "dataset": args.name,
+            "showcase": "vector->sql->cypher", "dataset": args.name,
             "lib_version": getattr(arcadedb, "__version__", "?"),
             "n_questions": len(q), "n_answers": len(a), "n_users": len(u),
             "n_asked": len(asked), "n_has_answer": len(has_ans), "n_answered": len(answered),
