@@ -385,20 +385,25 @@ graph and vectors.
 :::
 
 **Graph ([](#tbl-graph)).** The same pattern holds. On graph OLTP (neighborhood/traversal
-point operations) ArcadeDB runs ≈7× LadybugDB's throughput (≈3,800 vs ≈540 ops/s).
+point operations) ArcadeDB runs ≈7.5× LadybugDB's throughput (≈3,900 vs ≈525 ops/s).
 On graph analytics the analytics-oriented LadybugDB wins (≈66 ms vs ≈800 ms). The GAV
 is worth it on its own terms (it builds in ≈1.4 s and accelerates ArcadeDB's analytical
 traversals), but it narrows rather than closes the gap to a dedicated analytical
-graph engine. There is also an on-disk cost: ArcadeDB's richly-indexed property graph occupies
-≈19× the space of LadybugDB's columnar store (≈800 vs ≈41 MiB). Again, the summary is complementarity: transactional graph writes and point traversals here, heavy graph
-analytics on a specialist.
+graph engine. The costs are space and build memory. We build with ArcadeDB's default
+*bidirectional* edges, which store adjacency pointers on both endpoints so traversals run
+either way and the analytical planner can start from either end; this is the out-of-the-box
+behavior and the fair one to measure, but it roughly doubles the on-disk graph (≈1,774 vs a
+one-way ≈800 MiB) and raises peak build memory (a JVM growing its heap under a generous cap,
+against LadybugDB's ≈684 MiB C++ footprint). The on-disk graph is ≈43× LadybugDB's columnar
+store (≈1,774 vs ≈41 MiB). Again, the summary is complementarity: transactional graph writes and
+point traversals here, heavy graph analytics on a specialist.
 
 :::{table} Graph lane (Cross Validated corpus): LadybugDB, ArcadeDB. OLTP is neighborhood/traversal point ops (ops/s). OLAP is a multi-query analytical suite (ms). ArcadeDB OLAP uses a Graph Analytical View (one-time build shown). Values are median [min–max] over 5 reps. On-disk DB size is deterministic across reps (no range). Peak = container memory, DB = on-disk size (MiB).
 :label: tbl-graph
 | Backend | OLTP ops/s | OLAP ms | GAV build s | Peak MiB | DB MiB |
 |---|--:|--:|--:|--:|--:|
-| LadybugDB | 542 [531–550] | 66.3 [64.8–67.7] | — | 681 [661–694] | 41.4 |
-| ArcadeDB | 3,802 [3,599–4,377] | 797.8 [774.0–830.8] | 1.40 [1.37–1.60] | 4,608 [4,524–4,748] | 796.6 |
+| LadybugDB | 525 [467–532] | 65.7 [64.9–66.9] | — | 684 [675–688] | 41.4 |
+| ArcadeDB | 3,929 [3,466–4,422] | 796.3 [781.3–845.6] | 1.43 [1.38–1.66] | 11,458 [10,302–11,663] | 1,774.1 |
 :::
 
 **Vector ([](#tbl-vector)).** With HNSW parameters matched across engines, ArcadeDB is
@@ -441,17 +446,18 @@ real-time serving it matters.
 | tabular read | SQLite | 0.06 | 0.27 | 0.4 |
 | tabular read | DuckDB | 0.91 | 1.86 | 3.3 |
 | tabular read | ArcadeDB | 0.05 | 0.15 | 30.6 |
-| graph point | LadybugDB | 0.39 | 1.22 | 2.3 |
-| graph point | ArcadeDB | 0.13 | 0.43 | 1.0 |
-| graph hop | LadybugDB | 1.33 | 4.41 | 10.9 |
-| graph hop | ArcadeDB | 0.16 | 0.55 | 75.5 |
+| graph point | LadybugDB | 0.41 | 1.24 | 1.8 |
+| graph point | ArcadeDB | 0.14 | 0.45 | 1.5 |
+| graph hop | LadybugDB | 1.44 | 4.34 | 11.0 |
+| graph hop | ArcadeDB | 0.16 | 0.56 | 74.7 |
 :::
 
-**Memory is the cost.** For modest transactional and graph workloads ArcadeDB's footprint is larger than the
-lean C-based specialists (≈870 MiB vs ≈283–300 MiB on the tabular workload), the cost of a
-running JVM and a general-purpose engine. The vector lane is the exception that proves the
-rule: its disk-backed index makes it *more* memory-frugal than an all-in-RAM vector library at
-scale. We report these plainly so practitioners can decide. The unified, in-process engine is
+**Memory is the cost.** On the transactional workload ArcadeDB's footprint is larger than the
+lean C-based specialists (≈870 MiB vs ≈283–300 MiB), the cost of a running JVM and a
+general-purpose engine, and on the graph build it is larger still (the bidirectional property
+graph plus a heap growing under a generous cap, discussed above). The vector lane is the
+exception that proves the rule: its disk-backed index makes it *more* memory-frugal than an
+all-in-RAM vector library at scale. We report these plainly so practitioners can decide. The unified, in-process engine is
 not free, and for memory-constrained single-purpose tasks a specialist may be the better pick.
 
 Taken together, the comparison supports a measured claim. ArcadeDB-from-Python is *fast where
