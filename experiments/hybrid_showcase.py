@@ -126,7 +126,7 @@ def main():
 
         def batch_edges(pairs):
             with db.graph_batch(batch_size=max(1, len(pairs)), expected_edge_count=max(1, len(pairs)),
-                                bidirectional=True, commit_every=max(1, len(pairs)),
+                                bidirectional=False, commit_every=max(1, len(pairs)),
                                 use_wal=False, parallel_flush=pf) as b:
                 for frm, etype, to in pairs:
                     b.new_edge(frm, etype, to)
