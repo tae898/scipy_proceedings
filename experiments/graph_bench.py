@@ -104,7 +104,7 @@ def be_arcadedb(users, posts, posted, answers, workload):
     with bc.timed() as t_ing:
         for vtype, ids in (("User", users), ("Post", posts)):
             with db.graph_batch(batch_size=max(1, len(ids)), expected_edge_count=0,
-                                bidirectional=False, commit_every=max(1, len(ids)),
+                                bidirectional=True, commit_every=max(1, len(ids)),
                                 use_wal=False, parallel_flush=pf) as b:
                 b.create_vertices(vtype, [{"id": i} for i in ids])
         urid = {int(r["id"]): r["rid"] for r in
@@ -114,7 +114,7 @@ def be_arcadedb(users, posts, posted, answers, workload):
         for etype, edges, frm, to in (("POSTED", posted, urid, prid),
                                       ("ANSWERS", answers, prid, prid)):
             with db.graph_batch(batch_size=max(1, len(edges)), expected_edge_count=max(1, len(edges)),
-                                bidirectional=False, commit_every=max(1, len(edges)),
+                                bidirectional=True, commit_every=max(1, len(edges)),
                                 use_wal=False, parallel_flush=pf) as b:
                 b.new_edges([frm[a] for a, _ in edges], etype,
                             [to[c] for _, c in edges])
