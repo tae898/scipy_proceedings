@@ -283,13 +283,16 @@ and the SQL step's surviving ids feed the graph traversal directly, with no seri
 copying rows between processes, no second system to keep consistent, and no ETL. Over the
 complete set of Cross Validated questions and answers (all 213,761 questions and 208,986
 answers, with the 108,101 users linked to them), the end-to-end workflow runs warm in
-**≈89 ms** (vector ≈81 ms, SQL ≈5 ms, Cypher ≈2 ms; median over 20 reps after 5
-warmups, range 84–284 ms — the slowest reps hit JVM GC pauses). The Cypher traversal is accelerated by a Graph Analytical View,
-and the same traversal through ArcadeDB's native SQL `MATCH` surface answers in ≈5 ms:
-the two query surfaces are at parity over the same storage. (With the previous engine
-release this Cypher step took ≈143 ms; we reported the planner gap upstream and it was
-fixed within days, an instance of the release cadence noted at the end of the
-benchmark section.) All of it runs in a single process after a one-time bulk load. The
+**≈16 ms** (vector ≈10 ms, SQL ≈5 ms, Cypher ≈1.4 ms; median over 20 reps after 5
+warmups, range 15–17 ms). The graph is stored with ArcadeDB's default bidirectional
+edges, the Cypher traversal is accelerated by a Graph Analytical View, and the same
+traversal through ArcadeDB's native SQL `MATCH` surface answers in ≈3 ms: the two query
+surfaces are at parity over the same storage. (Preparing this workflow surfaced two
+engine issues that we reported upstream and that were each fixed within days — a Cypher
+planner gap that made this traversal ≈143 ms, and a vector-index maintenance bug that
+inflated the vector step to ≈100 ms and the bulk load by ≈45× — an instance of the
+release cadence noted at the end of the benchmark section.) All of it runs in a single
+process after a one-time bulk load. The
 three steps pass 200 vector candidates to the SQL filter, 50 survivors to the graph traversal,
 and return the top 10 answers. Timings were measured on the same host and 8-core cap as the
 comparison tables below.
@@ -353,7 +356,9 @@ captured in a manifest for reproducibility. Runs were executed on a single host:
 Intel Core i9-12900HK (20 logical cores, of which 8 were exposed to each container via
 `--cpuset-cpus 0-7`), 61 GiB usable RAM, a Samsung 980 PRO 2 TB NVMe SSD (PCIe 4.0) holding
 the databases and datasets, Linux kernel 7.0.0 (x86-64), and Docker 29.5.3. Engine and
-competitor versions were pinned: ArcadeDB (`arcadedb-embedded`) 26.8.1.dev2, DuckDB 1.5.4, SQLite
+competitor versions were pinned: ArcadeDB (`arcadedb-embedded`) 26.8.1.dev2 (the hybrid
+workflow of the previous section runs on 26.8.1.dev3, which adds the vector-index
+maintenance fix found while preparing it), DuckDB 1.5.4, SQLite
 3.46.1, LadybugDB (`ladybug`) 0.18.1, Chroma 1.5.9. Embeddings are 384-dimensional
 (`all-MiniLM-L6-v2`).
 
