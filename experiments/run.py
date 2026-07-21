@@ -130,6 +130,8 @@ def run_one(job, rep, mem, heap, image_ids):
     image_ids.setdefault(image, sh(["docker", "inspect", "--format", "{{.Id}}", image]))
     cmd = ["docker", "run", "-d", "--cpuset-cpus", CPUSET, "--memory", mem, "--memory-swap", mem,
            "-e", f"ARCADEDB_HEAP={heap}", "-e", f"RUN_LABEL={run_id}", "-e", "LAT_DIR=/work/results/lat",
+           *(["-e", f"BENCH_ARCADE_WAL_FLUSH={os.environ['BENCH_ARCADE_WAL_FLUSH']}"]
+             if os.environ.get("BENCH_ARCADE_WAL_FLUSH") else []),
            "-v", f"{HERE}:/work", "-w", "/work", "-v", f"{DATA}:/data:ro", image, "python"] + job["args"]
     cid = sh(cmd)
     if len(cid) < 12:

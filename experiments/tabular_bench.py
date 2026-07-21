@@ -119,7 +119,9 @@ def be_arcadedb(df, workload):
     path = tempfile.mkdtemp(prefix="tb_arcadedb_") + "/db"
     heap = os.environ.get("ARCADEDB_HEAP", "4g")
     with bc.timed() as t_jvm:
-        jvm.start_jvm(heap_size=heap)  # heap must match (else medium OOMs)
+        _wf = os.environ.get("BENCH_ARCADE_WAL_FLUSH")
+        _ja = f"-Darcadedb.txWalFlush={_wf}" if _wf else None
+        jvm.start_jvm(heap_size=heap, jvm_args=_ja) if _ja else jvm.start_jvm(heap_size=heap)  # heap must match (else medium OOMs)
     with bc.timed() as t_open:
         ctx = arcadedb.create_database(path, jvm_kwargs={"heap_size": heap})
         db = ctx.__enter__()
