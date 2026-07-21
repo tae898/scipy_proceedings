@@ -59,6 +59,15 @@ def be_sqlite(df, workload):
     path = tempfile.mkdtemp(prefix="tb_sqlite_") + "/db.sqlite"
     with bc.timed() as t_open:
         con = sqlite3.connect(path)
+        # Deliberate operating point, matched to ArcadeDB's default durability
+        # contract (async WAL flush = bounded loss window): WAL + NORMAL is
+        # the practitioner-standard SQLite config, not a benchmark special.
+        # Library defaults (rollback journal + synchronous=FULL) fsync every
+        # commit and measure the disk, not the engine; the strict-durability
+        # pairing (FULL vs arcadedb txWalFlush=2) is reported separately.
+        con.execute("PRAGMA journal_mode=WAL")
+        con.execute("PRAGMA synchronous=NORMAL")
+        con.execute("PRAGMA busy_timeout=30000")
     with bc.timed() as t_schema:
         con.execute("CREATE TABLE posts (id INTEGER PRIMARY KEY, post_type INT, "
                     "owner_user_id INT, score INT, view_count INT, title TEXT)")
