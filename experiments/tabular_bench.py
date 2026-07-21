@@ -91,8 +91,7 @@ def be_duckdb(df, workload):
         import duckdb
     path = tempfile.mkdtemp(prefix="tb_duckdb_") + "/db.duckdb"
     with bc.timed() as t_open:
-        con = duckdb.connect(path)
-        con.execute(f"PRAGMA threads={os.cpu_count()}")
+        con = duckdb.connect(path)  # pure defaults (threads already = all visible cores)
     with bc.timed() as t_schema:
         con.execute("CREATE TABLE posts (id INTEGER PRIMARY KEY, post_type INT, "
                     "owner_user_id INT, score INT, view_count INT, title VARCHAR)")
