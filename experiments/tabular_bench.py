@@ -120,10 +120,12 @@ def be_arcadedb(df, workload):
     heap = os.environ.get("ARCADEDB_HEAP", "4g")
     with bc.timed() as t_jvm:
         _wf = os.environ.get("BENCH_ARCADE_WAL_FLUSH")
-        _ja = f"-Darcadedb.txWalFlush={_wf}" if _wf else None
-        jvm.start_jvm(heap_size=heap, jvm_args=_ja) if _ja else jvm.start_jvm(heap_size=heap)  # heap must match (else medium OOMs)
+        _jvm_kwargs = {"heap_size": heap}
+        if _wf:
+            _jvm_kwargs["jvm_args"] = f"-Darcadedb.txWalFlush={_wf}"
+        jvm.start_jvm(**_jvm_kwargs)  # heap must match (else medium OOMs)
     with bc.timed() as t_open:
-        ctx = arcadedb.create_database(path, jvm_kwargs={"heap_size": heap})
+        ctx = arcadedb.create_database(path, jvm_kwargs=_jvm_kwargs)
         db = ctx.__enter__()
     with bc.timed() as t_schema:
         db.command("sql", "CREATE DOCUMENT TYPE Post")
