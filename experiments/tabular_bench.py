@@ -251,6 +251,7 @@ def main():
     res["close_s"] = round(t_close.s, 4)
     res["db_size_mb"] = bc.dir_size_mb(be["db_path"])
     bc.dump_latencies(os.environ.get("RUN_LABEL"), raw)
+    res["arcade_wal_flush"] = os.environ.get("BENCH_ARCADE_WAL_FLUSH", "default")
     print("RESULT " + json.dumps(res))
 
 
