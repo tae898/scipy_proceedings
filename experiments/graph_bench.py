@@ -91,8 +91,12 @@ def be_arcadedb(users, posts, posted, answers, workload):
         _wf = os.environ.get("BENCH_ARCADE_WAL_FLUSH")
         _jvm_kwargs = {"heap_size": heap}
         if _wf:
+            # jvm_args must reach the FIRST create_database call:
+            # the start_jvm(jvm_args=...) path silently drops them
+            # (bindings bug, fix pending); skip pre-start here.
             _jvm_kwargs["jvm_args"] = f"-Darcadedb.txWalFlush={_wf}"
-        jvm.start_jvm(**_jvm_kwargs)  # heap must match (else medium OOMs)
+        else:
+            jvm.start_jvm(**_jvm_kwargs)  # heap must match (else medium OOMs)
     with bc.timed() as t_open:
         ctx = arcadedb.create_database(path, jvm_kwargs=_jvm_kwargs)
         db = ctx.__enter__()
