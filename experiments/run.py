@@ -103,11 +103,13 @@ def sample_memory(cid, stop, series, peak_box, cpu_box):
         time.sleep(SAMPLE_INTERVAL)
 
 
-def build_jobs(datasets, lanes):
+def build_jobs(datasets, lanes, only_backends=None):
     jobs = []
     for ds in datasets:
         for lane in lanes:
             for be in LANE_BACKENDS[lane]:
+                if only_backends and be not in only_backends:
+                    continue
                 for wl in LANE_WORKLOADS[lane]:
                     if lane == "vector":
                         args = ["vector_bench.py", "--backend", be,
@@ -211,10 +213,12 @@ def main():
     ap.add_argument("--datasets", default="tiny")
     ap.add_argument("--lanes", default="vector,tabular,graph")
     ap.add_argument("--reps", type=int, default=5)
+    ap.add_argument("--backends", default="",
+                    help="comma-separated backend filter (default: all)")
     args = ap.parse_args()
     datasets, lanes = args.datasets.split(","), args.lanes.split(",")
 
-    jobs = build_jobs(datasets, lanes)
+    jobs = build_jobs(datasets, lanes, only_backends=set(a for a in args.backends.split(",") if a) or None)
     # skip tabular/graph cells whose prepared parquet is missing
     jobs = [j for j in jobs if j["lane"] == "vector"
             or os.path.isdir(os.path.join(DATA, f"stackoverflow-{j['ds']}", "prepared"))]
