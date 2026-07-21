@@ -67,7 +67,6 @@ def be_sqlite(df, workload):
         # pairing (FULL vs arcadedb txWalFlush=2) is reported separately.
         con.execute("PRAGMA journal_mode=WAL")
         con.execute("PRAGMA synchronous=NORMAL")
-        con.execute("PRAGMA busy_timeout=30000")
     with bc.timed() as t_schema:
         con.execute("CREATE TABLE posts (id INTEGER PRIMARY KEY, post_type INT, "
                     "owner_user_id INT, score INT, view_count INT, title TEXT)")
