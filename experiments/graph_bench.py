@@ -91,9 +91,10 @@ def be_arcadedb(users, posts, posted, answers, workload):
         _wf = os.environ.get("BENCH_ARCADE_WAL_FLUSH")
         _jvm_kwargs = {"heap_size": heap}
         if _wf:
-            # jvm_args must reach the FIRST create_database call:
-            # the start_jvm(jvm_args=...) path silently drops them
-            # (bindings bug, fix pending); skip pre-start here.
+            # route jvm_args through create_database so start_jvm's
+            # already-started guard sees identical kwargs (NOTE: the earlier
+            # 'bindings drop jvm_args' suspicion was wrong -- the real culprit
+            # was engine #5378, GraphBatch leaking relaxed WAL settings).
             _jvm_kwargs["jvm_args"] = f"-Darcadedb.txWalFlush={_wf}"
         else:
             jvm.start_jvm(**_jvm_kwargs)  # heap must match (else medium OOMs)
