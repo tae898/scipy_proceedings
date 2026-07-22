@@ -8,11 +8,12 @@ median [min-max] and emits Markdown tables to results/tables.md. Results go in t
     python make_tables.py
 """
 import csv
+import os
 import collections
 import statistics as st
 
 HERE = __file__.rsplit("/", 1)[0]
-RUNS = f"{HERE}/results/runs.csv"
+RUNS = os.environ.get("RUNS_CSV", f"{HERE}/results/runs.csv")
 OUT = f"{HERE}/results/tables.md"
 
 TIERS = ["tiny", "small", "medium"]
