@@ -238,10 +238,10 @@ hits = db.query(<span class="s">"cypher"</span>,
         <span class="eyebrow green">Honest results — vs specialist embedded peers</span>
         <h2 style="margin-bottom:2px;">Fast where it's designed to be</h2>
         <div class="wins">
-          <div class="win-row"><div class="m" style="font-size:22px;white-space:nowrap;">23–30×</div><div class="d"><b>Tabular OLTP throughput</b>
-            vs SQLite &amp; DuckDB (≈5,700 vs ≈187–243 ops/s).</div></div>
-          <div class="win-row"><div class="m">≈7.5×</div><div class="d"><b>Graph OLTP throughput</b>
-            vs LadybugDB (≈3,900 vs ≈525 ops/s).</div></div>
+          <div class="win-row"><div class="m" style="font-size:22px;white-space:nowrap;">p99 wins</div><div class="d"><b>Read latency</b>: graph point/hop
+            0.45/0.56 ms beat the graph specialist; tabular 0.17 ms beats DuckDB.</div></div>
+          <div class="win-row"><div class="m">≈7.5×</div><div class="d"><b>Graph OLTP</b> vs LadybugDB at default
+            contracts (≈3,900 vs ≈525 ops/s); parity at matched full durability — disclosed.</div></div>
           <div class="win-row"><div class="m">0.95</div><div class="d"><b>Vector recall@10</b> at matched
             HNSW (Chroma 0.97) — competitive <i>while</i> multi-model, with <b>lower peak memory</b>
             (16.8 vs 24.6&nbsp;GiB, disk-backed index).</div></div>
@@ -250,9 +250,11 @@ hits = db.query(<span class="s">"cypher"</span>,
 
       <div class="card tint">
         <span class="eyebrow orange">…and where it isn't (we don't hide it)</span>
-        <p style="margin-top:7px;">Specialists win <b>heavy analytics</b>: DuckDB ≈9 ms vs ≈1,310 ms
-          (tabular OLAP); LadybugDB ≈66 ms vs ≈800 ms (graph, a <b>GAV</b> narrows the gap). The standing
-          cost is <span class="hlo">memory</span> — a JVM baseline (≈870 MiB tabular) above the lean C peers;
+        <p style="margin-top:7px;">Specialists win <b>heavy analytics</b>: DuckDB ≈9 ms vs ≈1,300 ms
+          (tabular OLAP); LadybugDB ≈66 ms vs ≈800 ms (graph, a <b>GAV</b> narrows the gap). WAL-mode
+          <b>SQLite owns raw point-op throughput</b> (≈87k vs ≈5.8k ops/s — in-process C is untouchable;
+          durability contracts disclosed per engine). The standing
+          cost is <span class="hlo">memory</span> — a JVM baseline (≈852 MiB tabular) above the lean C peers;
           startup is sub-second, with an occasional GC tail. But these gaps are a
           <span class="hl">moving target</span>: ArcadeDB ships ~monthly and the binding packages each
           release, so Python benefits automatically.</p>
