@@ -341,6 +341,9 @@ Chroma (vector).
 
 **Protocol.** Each (lane, backend, workload) cell runs in its own pinned Docker container, one
 at a time, restricted to 8 CPU cores (`--cpuset-cpus 0-7`) and a memory cap, repeated 5 times.
+Engines run their shipped defaults except where stated: SQLite is configured WAL +
+`synchronous=NORMAL` (its documented recommendation; the durability implications are stated
+with the tabular results), and ArcadeDB's JVM heap is pinned per tier.
 We report the median with the full [min–max] range: database benchmark repetitions are
 right-skewed (GC pauses, page-cache state), so the median resists outliers while the range
 exposes them, following established guidance for performance reporting
@@ -372,26 +375,44 @@ contributors by post count, and multi-hop path counts). The vector lane runs 1,0
 nearest-neighbor queries and reports recall@10 against an exact brute-force ground truth. The
 exact query text for every lane is in the public benchmark suite.
 
-**Tabular ([](#tbl-tabular)).** The results match the engine's transactional design and are candid about the converse. On the mixed transactional workload, ArcadeDB sustains roughly
-**23–30× the throughput** of SQLite and DuckDB (≈5,700 ops/s vs ≈187 and ≈243). Point reads,
-inserts, and updates are where it shines. On analytical SQL the specialists win decisively:
-DuckDB's columnar engine answers the analytics suite in ≈9 ms versus ArcadeDB's ≈1,310 ms, and
-even SQLite is several times faster. ArcadeDB is not uniformly fast or slow here. It is built for transactional rather than analytical work. You would not pick it to be your analytical
-warehouse, and you would happily use it for transactional, record-oriented work alongside the
-graph and vectors.
+**Tabular ([](#tbl-tabular)).** Transactional throughput comparisons are durability-sensitive,
+so we state the contracts first. SQLite runs WAL + `synchronous=NORMAL` — its own
+documentation's recommendation, fsyncing at checkpoints rather than per commit — and ArcadeDB
+runs its default asynchronous WAL flush; both are bounded-loss contracts. DuckDB fsyncs per
+commit and exposes no relaxation, so it is the one fully-durable engine in this table. At this
+matched-relaxed operating point the in-process C library dominates the mixed point workload:
+SQLite sustains ≈87,000 ops/s to ArcadeDB's ≈5,800 (≈15×), while ArcadeDB in turn runs ≈26×
+DuckDB's fully-durable ≈219. Under the *strict* pairing — per-commit fsync for both, measured
+as an ablation (`arcadedb.txWalFlush=2` vs `synchronous=FULL`) — the two converge to the
+disk's fsync floor: ≈242 vs ≈187 ops/s. An earlier version of this benchmark ran SQLite at
+library defaults (rollback journal, `synchronous=FULL`) against ArcadeDB's async default,
+which inflated ArcadeDB's apparent advantage to 24–31×; we consider the corrected numbers the
+honest ones and flag the asymmetry so others avoid it. On analytical SQL the specialists win
+decisively: DuckDB's columnar engine answers the analytics suite in ≈9 ms versus ArcadeDB's
+≈1,300 ms. The summary is unglamorous and useful: for single-model point work an embedded
+C library is untouchable; ArcadeDB's transactional throughput is ample for application
+workloads and comes attached to the graph and vector models that the rest of this paper is
+about.
 
-:::{table} Tabular lane (Cross Validated corpus): SQLite, DuckDB, ArcadeDB. OLTP is a mixed point read/insert/update workload (ops/s, higher is better). OLAP is an analytical aggregation suite (ms, lower is better). Values are median [min–max] over 5 reps. On-disk DB size is deterministic across reps (no range). Peak = container memory, DB = on-disk size after load (MiB).
+:::{table} Tabular lane (Cross Validated corpus): SQLite, DuckDB, ArcadeDB. OLTP is a mixed point read/insert/update workload (ops/s, higher is better). OLAP is an analytical aggregation suite (ms, lower is better). Values are median [min–max] over 5 reps. Durability contracts: SQLite WAL+NORMAL and ArcadeDB async WAL (both bounded-loss); DuckDB per-commit fsync (fully durable). At matched per-commit fsync (ablation), ArcadeDB ≈242 ops/s vs SQLite ≈187. On-disk DB size is deterministic across reps (no range). Peak = container memory, DB = on-disk size after load (MiB).
 :label: tbl-tabular
 | Backend | OLTP ops/s | OLAP ms | Ingest s | Peak MiB | DB MiB |
 |---|--:|--:|--:|--:|--:|
-| SQLite | 187 [187–187] | 285.4 [284.9–286.8] | 0.32 [0.32–0.33] | 283 [281–295] | 20.1 |
-| DuckDB | 243 [241–243] | 9.3 [9.3–9.6] | 0.38 [0.37–0.38] | 300 [296–315] | 17.3 |
-| ArcadeDB | 5,698 [5,533–5,977] | 1,306.0 [1,299.6–1,328.4] | 13.90 [13.82–14.04] | 870 [815–960] | 38.3 |
+| SQLite | 87,150 [59,138–88,591] | 292.8 [284.4–293.9] | 0.33 [0.32–0.36] | 299 [277–304] | 20.1 |
+| DuckDB | 219 [199–226] | 9.3 [9.3–9.6] | 0.38 [0.37–0.39] | 301 [296–308] | 17.3 |
+| ArcadeDB | 5,786 [5,067–5,892] | 1,299.6 [1,276.3–1,317.6] | 13.98 [13.76–14.42] | 852 [785–950] | 38.3 |
 :::
 
-**Graph ([](#tbl-graph)).** The same pattern holds. On graph OLTP (neighborhood/traversal
-point operations) ArcadeDB runs ≈7.5× LadybugDB's throughput (≈3,900 vs ≈525 ops/s).
-On graph analytics the analytics-oriented LadybugDB wins (≈66 ms vs ≈800 ms). The GAV
+**Graph ([](#tbl-graph)).** The durability lens matters here too: LadybugDB commits with
+full per-commit durability by default (we measured its single-transaction writes at the same
+≈110/s fsync floor as everyone else's strict mode) and exposes no relaxation knob. At the
+engines' respective defaults ArcadeDB runs ≈7.5× LadybugDB's mixed-OLTP throughput (≈3,900
+vs ≈525 ops/s) — but at ArcadeDB's matched-strict ablation the suite converges to near
+parity (≈539 vs ≈525), so the headline gap is a difference in default durability contracts
+at least as much as in engines. Where ArcadeDB's advantage is contract-independent is
+per-operation read latency: its point and 1-hop reads beat LadybugDB's at every percentile
+([](#tbl-latency)). On graph analytics the analytics-oriented LadybugDB wins
+(≈66 ms vs ≈800 ms). The GAV
 is worth it on its own terms (it builds in ≈1.4 s and accelerates ArcadeDB's analytical
 traversals), but it narrows rather than closes the gap to a dedicated analytical
 graph engine. The costs are space and build memory. We build with ArcadeDB's default
@@ -403,7 +424,7 @@ against LadybugDB's ≈684 MiB C++ footprint). The on-disk graph is ≈43× Lady
 store (≈1,774 vs ≈41 MiB). Again, the summary is complementarity: transactional graph writes and
 point traversals here, heavy graph analytics on a specialist.
 
-:::{table} Graph lane (Cross Validated corpus): LadybugDB, ArcadeDB. OLTP is neighborhood/traversal point ops (ops/s). OLAP is a multi-query analytical suite (ms). ArcadeDB OLAP uses a Graph Analytical View (one-time build shown). Values are median [min–max] over 5 reps. On-disk DB size is deterministic across reps (no range). Peak = container memory, DB = on-disk size (MiB).
+:::{table} Graph lane (Cross Validated corpus): LadybugDB, ArcadeDB. OLTP is neighborhood/traversal point ops (ops/s). OLAP is a multi-query analytical suite (ms). ArcadeDB OLAP uses a Graph Analytical View (one-time build shown). Values are median [min–max] over 5 reps. Durability contracts: LadybugDB fsyncs per commit (no relaxation knob); ArcadeDB shown at its async default — at matched per-commit fsync (ablation) its suite throughput is ≈539 ops/s, near parity with LadybugDB. On-disk DB size is deterministic across reps (no range). Peak = container memory, DB = on-disk size (MiB).
 :label: tbl-graph
 | Backend | OLTP ops/s | OLAP ms | GAV build s | Peak MiB | DB MiB |
 |---|--:|--:|--:|--:|--:|
@@ -436,9 +457,11 @@ negligible**: isolated JVM initialization is ≈0.16 s and database open ≈0.12
 sub-second cost amortized over any real session, and in fact *smaller* than Chroma's Python
 import alone (≈0.37 s). The bulk of an ArcadeDB vector build is the HNSW index phase (≈322 s of
 the ≈353 s total), not startup. Second, ArcadeDB's **typical latencies are excellent**
-([](#tbl-latency)): graph point and 1-hop p99 (0.43 ms, 0.55 ms) beat LadybugDB's (1.22 ms,
-4.41 ms), and tabular read p99 (0.15 ms) beats SQLite and DuckDB. But the JVM shows a **tail**:
-occasional max latencies of tens of milliseconds (e.g. a 31–76 ms outlier under GC), the cost
+([](#tbl-latency)): graph point and 1-hop p99 (0.45 ms, 0.56 ms) beat LadybugDB's (1.24 ms,
+4.34 ms), and tabular read p99 (0.17 ms) beats DuckDB's (1.89 ms) — though not WAL-mode
+SQLite's memory-mapped reads (0.007 ms), which nothing in this table touches. But the JVM
+shows a **tail**: occasional max latencies of tens of milliseconds (e.g. a 34–75 ms outlier
+under GC), the cost
 of a managed runtime. For interactive and batch analytics this tail is irrelevant. For hard
 real-time serving it matters.
 
@@ -448,9 +471,9 @@ real-time serving it matters.
 |---|---|--:|--:|--:|
 | vector query | Chroma | 1.19 | 1.40 | 1.6 |
 | vector query | ArcadeDB | 4.16 | 6.08 | 8.9 |
-| tabular read | SQLite | 0.06 | 0.27 | 0.4 |
-| tabular read | DuckDB | 0.91 | 1.86 | 3.3 |
-| tabular read | ArcadeDB | 0.05 | 0.15 | 30.6 |
+| tabular read | SQLite | 0.004 | 0.007 | 0.1 |
+| tabular read | DuckDB | 0.93 | 1.89 | 2.9 |
+| tabular read | ArcadeDB | 0.06 | 0.17 | 33.9 |
 | graph point | LadybugDB | 0.41 | 1.24 | 1.8 |
 | graph point | ArcadeDB | 0.14 | 0.45 | 1.5 |
 | graph hop | LadybugDB | 1.44 | 4.34 | 11.0 |
@@ -458,19 +481,23 @@ real-time serving it matters.
 :::
 
 **Memory is the cost.** On the transactional workload ArcadeDB's footprint is larger than the
-lean C-based specialists (≈870 MiB vs ≈283–300 MiB), the cost of a running JVM and a
+lean C-based specialists (≈852 MiB vs ≈299–301 MiB), the cost of a running JVM and a
 general-purpose engine, and on the graph build it is larger still (the bidirectional property
 graph plus a heap growing under a generous cap, discussed above). The vector lane is the
 exception that proves the rule: its disk-backed index makes it *more* memory-frugal than an
 all-in-RAM vector library at scale. We report these plainly so practitioners can decide. The unified, in-process engine is
 not free, and for memory-constrained single-purpose tasks a specialist may be the better pick.
 
-Taken together, the comparison supports a measured claim. ArcadeDB-from-Python is *fast where
-it is designed to be* (OLTP, transactional graph), *competitive where it matters for the
-hybrid story* (vector search at matched recall), *outclassed by specialists on heavy
-analytics*, and *clear about its memory cost*. That is a sensible profile for the
-engine underneath a unified, in-process workflow: strong on the transactional core, and good
-enough across the rest to keep everything in one place.
+Taken together, the comparison supports a measured claim — more measured than our own first
+draft of it. ArcadeDB-from-Python has *excellent point-operation latencies* (graph reads beat
+the graph specialist at every percentile; tabular reads beat DuckDB), *ample transactional
+throughput under either durability contract* (converging with the specialists at the fsync
+floor when strict), is *competitive on vector search at matched recall with lower peak
+memory*, is *outclassed by specialists on heavy analytics and by in-process C on raw
+single-model point throughput*, and is *clear about its memory cost*. None of these numbers
+alone justifies a multi-model engine; the case is the previous section's: three models, one
+process, one transaction — with per-model performance that is good enough to keep everything
+in one place.
 
 These results are a snapshot of the versions pinned in the protocol. ArcadeDB is in active
 development and releases on a roughly monthly cadence (its version scheme is year-and-month),
