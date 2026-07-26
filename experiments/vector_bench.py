@@ -50,9 +50,14 @@ def recall_at_ks(retrieved, gt, ks):
     return out
 
 
-# Shared HNSW params (matched across ArcadeDB + Chroma; mirror ex 11/12)
-M = 16              # maxConnections / hnsw:M
-EF_CONSTRUCTION = 100  # beamWidth / hnsw:construction_ef
+# Graph params, matched by what they DO rather than by name.
+# Chroma's hnsw:M is the hnswlib M, which doubles at the base layer;
+# ArcadeDB's maxConnections is the per-layer Vamana degree (upstream
+# issue #5352). Passing one value to both compares graphs of half the
+# degree, so ArcadeDB gets 2*M to reach the same effective connectivity.
+HNSW_M = 16                      # Chroma: hnsw:M
+ARCADE_MAX_CONNECTIONS = 2 * HNSW_M  # ArcadeDB: maxConnections
+EF_CONSTRUCTION = 100            # beamWidth / hnsw:construction_ef
 
 
 def backend_arcadedb(vecs, dim, ef_search):
@@ -82,7 +87,7 @@ def backend_arcadedb(vecs, dim, ef_search):
     with bc.timed() as t_idx:
         db.command("sql", f'''CREATE INDEX ON Article (embedding) LSM_VECTOR
                               METADATA {{ "dimensions": {dim}, "similarity": "COSINE",
-                              "maxConnections": {M}, "beamWidth": {EF_CONSTRUCTION},
+                              "maxConnections": {ARCADE_MAX_CONNECTIONS}, "beamWidth": {EF_CONSTRUCTION},
                               "storeVectorsInGraph": false, "addHierarchy": true }}''')
 
     def search(qvec, k):
@@ -108,7 +113,7 @@ def backend_chroma(vecs, dim, ef_search):
     with bc.timed() as t_open:
         client = chromadb.PersistentClient(path=path)
         col = client.create_collection("articles", metadata={
-            "hnsw:space": "cosine", "hnsw:M": M,
+            "hnsw:space": "cosine", "hnsw:M": HNSW_M,
             "hnsw:construction_ef": EF_CONSTRUCTION, "hnsw:search_ef": ef_search})
 
     str_ids = [str(i) for i in range(len(vecs))]
@@ -181,7 +186,8 @@ def main():
     result = {
         "backend": args.backend, "lib_version": be["version"], "lane": "vector",
         "dataset": args.name, "corpus": args.corpus, "model": meta.get("model", "?"),
-        "hnsw_M": M, "hnsw_ef_construction": EF_CONSTRUCTION, "ef_search": args.ef_search,
+        "hnsw_M": HNSW_M, "arcade_max_connections": ARCADE_MAX_CONNECTIONS,
+        "hnsw_ef_construction": EF_CONSTRUCTION, "ef_search": args.ef_search,
         "n_vectors": n, "dim": meta["dim"], "n_queries": len(queries),
         # lifecycle phases (s)
         "import_s": round(be["import_s"], 4), "jvm_init_s": round(be["jvm_init_s"], 4),

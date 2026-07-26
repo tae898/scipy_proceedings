@@ -114,9 +114,11 @@ def main():
             if n % BATCH == 0:
                 db.commit(); db.begin()
         db.commit()
+        # maxConnections is ArcadeDB's per-layer Vamana degree; 32 matches an
+        # hnswlib M=16 graph (upstream #5352), as in vector_bench.py.
         db.command("sql", f'''CREATE INDEX ON Question (embedding) LSM_VECTOR
             METADATA {{ "dimensions": {dim}, "similarity": "COSINE",
-            "maxConnections": 16, "beamWidth": 100 }}''')
+            "maxConnections": 32, "beamWidth": 100 }}''')
 
         # --- edges via graph_batch (@rid lookups) ---
         qrid = {int(r["id"]): r["rid"] for r in db.query("sql", "SELECT id,@rid as rid FROM Question").to_json_list()}
