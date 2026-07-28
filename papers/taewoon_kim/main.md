@@ -233,13 +233,17 @@ This is the "strong transactional core, *and* graph OLAP via GAV" story we quant
 
 Embeddings are stored as a float-array property and indexed with an HNSW (`LSM_VECTOR`) index.
 Search is a SQL function over the index. Parameters (`dimensions`, `similarity`,
-`maxConnections` = HNSW $M$, `beamWidth` = `ef_construction`) are set on the index, and the
-query supplies `ef_search`:
+`maxConnections`, `beamWidth` = `ef_construction`) are set on the index, and the
+query supplies `ef_search`. One mapping deserves care: `maxConnections` is the
+per-layer out-degree of the underlying Vamana graph, not hnswlib's $M$, and
+hnswlib builds its base layer at $2M$. Setting both to the same number therefore
+compares a half-degree ArcadeDB graph against a full-degree hnswlib one. We set
+`maxConnections` $= 2M = 32$ to match the two by effect rather than by name:
 
 ```python
 db.command("sql", "CREATE INDEX ON Question (embedding) LSM_VECTOR "
     'METADATA { "dimensions": 384, "similarity": "COSINE", '
-    '"maxConnections": 16, "beamWidth": 100 }')
+    '"maxConnections": 32, "beamWidth": 100 }')
 
 hits = db.query("sql",
     "SELECT id, score, distance FROM "
@@ -351,17 +355,22 @@ exposes them, following established guidance for performance reporting
 and CPU and reads the kernel peak. The data is the **Cross Validated** (`stats.stackexchange.com`)
 public data dump [@crossvalidated], a statistics and machine-learning Q&A corpus and the most
 SciPy-relevant Stack Exchange site, comprising 425,735 posts, 345,754 users, and 1,242,391
-text embeddings. Vector lanes use **matched HNSW parameters across engines** ($M = 16$,
-`ef_construction` $= 100$, `ef_search` $= 100$) and report recall@10 against an exact
-ground truth. Graph OLAP for ArcadeDB uses a GAV, and tabular OLAP for ArcadeDB uses secondary
+text embeddings. Vector lanes use **matched HNSW parameters across engines**, with graph degree
+matched by effect rather than by name (Chroma $M = 16$, so a base layer of 32; ArcadeDB
+`maxConnections` $= 32$), plus `ef_construction` $= 100$ and `ef_search` $= 100$, and report
+recall@10 against an exact ground truth. Graph OLAP for ArcadeDB uses a GAV, and tabular OLAP for ArcadeDB uses secondary
 indexes. All versions, image digests, host details, and per-run memory time-series are
 captured in a manifest for reproducibility. Runs were executed on a single host: a 12th-gen
 Intel Core i9-12900HK (20 logical cores, of which 8 were exposed to each container via
 `--cpuset-cpus 0-7`), 61 GiB usable RAM, a Samsung 980 PRO 2 TB NVMe SSD (PCIe 4.0) holding
 the databases and datasets, Linux kernel 7.0.0 (x86-64), and Docker 29.5.3. Engine and
-competitor versions were pinned: ArcadeDB (`arcadedb-embedded`) 26.8.1.dev2 (the hybrid
-workflow of the previous section runs on 26.8.1.dev3, which adds the vector-index
-maintenance fix found while preparing it), DuckDB 1.5.4, SQLite
+competitor versions were pinned per lane, since the lanes were measured as the engine fixes
+this work produced landed: ArcadeDB (`arcadedb-embedded`) 26.8.1.dev2 for the graph lane,
+26.8.1.dev3 for the tabular lane and the hybrid workflow of the previous section, and
+26.8.1.dev20 for the vector lane, which was re-measured last at matched graph degree. Re-running
+the graph lane on 26.8.1.dev20 reproduces its published numbers within run-to-run spread (OLAP
+796.4 ms vs 796.3, GAV build 1.40 s vs 1.43, OLTP 3,762 ops/s vs 3,929), so the version spread
+is a reporting detail rather than a confound. DuckDB 1.5.4, SQLite
 3.46.1, LadybugDB (`ladybug`) 0.18.1, Chroma 1.5.9. Embeddings are 384-dimensional
 (`all-MiniLM-L6-v2`).
 
@@ -432,22 +441,30 @@ point traversals here, heavy graph analytics on a specialist.
 | ArcadeDB | 3,929 [3,466–4,422] | 796.3 [781.3–845.6] | 1.43 [1.38–1.66] | 11,458 [10,302–11,663] | 1,774.1 |
 :::
 
-**Vector ([](#tbl-vector)).** With HNSW parameters matched across engines, ArcadeDB is
-*competitive while being multi-model*. Build times track Chroma closely (≈353 s vs ≈307 s for
-1.24 M vectors). Recall@10 is comparable (≈0.95 vs ≈0.97), and query latency is ≈3.5× higher
-(≈4.2 ms vs ≈1.2 ms) but still single-digit milliseconds. The notable result is memory:
-ArcadeDB's *peak* memory is **lower** than Chroma's (≈16.8 GiB vs ≈24.6 GiB), because the
-engine keeps vectors on disk rather than holding the entire set resident in RAM as the
-pure-Python HNSW path does. The trade is deliberate: you give up some query
-latency relative to a dedicated vector store and get vectors that live in the same engine as
-your documents and graph.
+**Vector ([](#tbl-vector)).** With graph degree matched by effect rather than by name
+(`maxConnections` $= 2M$), ArcadeDB is *competitive while being multi-model*, and the
+comparison lands differently than a name-matched one would. Recall@10 is **higher** than
+Chroma's (0.979 vs 0.973), so ArcadeDB is the more exact of the two at this operating point,
+not the more approximate. The costs are build time (≈546 s vs ≈318 s for 1.24 M vectors) and
+query latency, ≈3.4× higher (≈3.9 ms vs ≈1.2 ms) but still single-digit milliseconds. The
+notable result is memory: ArcadeDB's *peak* memory is **lower** than Chroma's (≈15.2 GiB vs
+≈24.6 GiB, a 38% reduction), because the engine keeps vectors on disk rather than holding the
+entire set resident in RAM as the pure-Python HNSW path does. The trade is deliberate: you
+give up some query latency relative to a dedicated vector store and get vectors that live in
+the same engine as your documents and graph.
 
-:::{table} Vector lane (Cross Validated corpus, 1,242,391 vectors): Chroma, ArcadeDB, matched HNSW ($M=16$, `ef_construction`=100, `ef_search`=100). Build = insert+index (s). Query = mean latency per query within a rep (ms). recall@10 vs exact ground truth. Values are median [min–max] over 5 reps. On-disk DB size is deterministic across reps (no range). Peak = container memory, DB = on-disk size (MiB).
+The degree correction is worth stating plainly because it moved a conclusion. Our earlier
+name-matched configuration reported recall 0.951 against Chroma's 0.971 and read as a small
+quality deficit. It was an artifact of comparing a degree-16 graph against a degree-32 one.
+At matched degree the deficit reverses, and the build-time cost of the denser graph (≈353 s
+to ≈546 s) is the price of that recall. The mapping is now documented upstream.
+
+:::{table} Vector lane (Cross Validated corpus, 1,242,391 vectors): Chroma, ArcadeDB, matched HNSW graph degree (Chroma $M=16$, ArcadeDB `maxConnections`=32, both `ef_construction`=100, `ef_search`=100). Build = insert+index (s). Query = mean latency per query within a rep (ms). recall@10 vs exact ground truth. Values are median [min–max] over 5 reps. On-disk DB size is deterministic across reps (no range). Peak = container memory, DB = on-disk size (MiB).
 :label: tbl-vector
 | Backend | Build s | Query ms | recall@10 | Peak MiB | DB MiB |
 |---|--:|--:|--:|--:|--:|
-| Chroma | 306.9 [306.4–308.5] | 1.19 [1.14–1.21] | 0.971 [0.971–0.974] | 25,201 [25,184–25,226] | 2,208 |
-| ArcadeDB | 352.7 [330.7–354.0] | 4.19 [4.12–4.26] | 0.951 [0.949–0.954] | 17,157 [17,103–19,009] | 2,781 |
+| Chroma | 317.9 [317.2–320.1] | 1.16 [1.15–1.19] | 0.973 [0.972–0.974] | 25,176 [25,168–25,186] | 2,208 |
+| ArcadeDB | 545.5 [542.0–547.5] | 3.93 [3.77–4.00] | 0.979 [0.977–0.979] | 15,593 [14,841–17,480] | 2,857 |
 :::
 
 Beyond the headline throughput and latency numbers, the benchmark suite isolates each
@@ -455,8 +472,8 @@ lifecycle phase (import, JVM init, open, schema, ingest, index build, close), an
 cross-cutting results bear on concerns a JVM-backed binding raises. First, **JVM startup is
 negligible**: isolated JVM initialization is ≈0.16 s and database open ≈0.12 s, a one-time,
 sub-second cost amortized over any real session, and in fact *smaller* than Chroma's Python
-import alone (≈0.37 s). The bulk of an ArcadeDB vector build is the HNSW index phase (≈322 s of
-the ≈353 s total), not startup. Second, ArcadeDB's **typical latencies are excellent**
+import alone (≈0.37 s). The bulk of an ArcadeDB vector build is the HNSW index phase (≈514 s of
+the ≈546 s total), not startup. Second, ArcadeDB's **typical latencies are excellent**
 ([](#tbl-latency)): graph point and 1-hop p99 (0.45 ms, 0.56 ms) beat LadybugDB's (1.24 ms,
 4.34 ms), and tabular read p99 (0.17 ms) beats DuckDB's (1.89 ms) — though not WAL-mode
 SQLite's memory-mapped reads (0.007 ms), which nothing in this table touches. But the JVM
@@ -469,8 +486,8 @@ real-time serving it matters.
 :label: tbl-latency
 | Lane / op | Backend | p50 | p99 | max |
 |---|---|--:|--:|--:|
-| vector query | Chroma | 1.19 | 1.40 | 1.6 |
-| vector query | ArcadeDB | 4.16 | 6.08 | 8.9 |
+| vector query | Chroma | 1.16 | 1.36 | 1.6 |
+| vector query | ArcadeDB | 3.79 | 6.93 | 8.8 |
 | tabular read | SQLite | 0.004 | 0.007 | 0.1 |
 | tabular read | DuckDB | 0.93 | 1.89 | 2.9 |
 | tabular read | ArcadeDB | 0.06 | 0.17 | 33.9 |
@@ -492,8 +509,8 @@ Taken together, the comparison supports a measured claim — more measured than 
 draft of it. ArcadeDB-from-Python has *excellent point-operation latencies* (graph reads beat
 the graph specialist at every percentile; tabular reads beat DuckDB), *ample transactional
 throughput under either durability contract* (converging with the specialists at the fsync
-floor when strict), is *competitive on vector search at matched recall with lower peak
-memory*, is *outclassed by specialists on heavy analytics and by in-process C on raw
+floor when strict), is *competitive on vector search at matched graph degree, trading query
+latency for slightly higher recall and 38% lower peak memory*, is *outclassed by specialists on heavy analytics and by in-process C on raw
 single-model point throughput*, and is *clear about its memory cost*. None of these numbers
 alone justifies a multi-model engine; the case is the previous section's: three models, one
 process, one transaction — with per-model performance that is good enough to keep everything
@@ -555,7 +572,7 @@ one transaction. The mental model we hope readers take away is simple: *when a l
 needs more than one data model over the same data, you can have one embedded engine instead of
 a stack.* Our hybrid workflow shows this concretely (vector → SQL → graph with no ETL),
 and our matched comparison lays out the tradeoffs: strong on the transactional core,
-competitive on vectors at matched recall, outclassed by specialists on heavy analytics, and
+competitive on vectors at matched graph degree, outclassed by specialists on heavy analytics, and
 carrying a real but bounded memory cost. The contribution is the Python enablement, not the
 engine. We credit ArcadeDB and its authors for the latter. The binding (Apache-2.0), the full
 benchmark suite, the datasets, and the run manifest are openly available, so every result here

@@ -242,9 +242,9 @@ hits = db.query(<span class="s">"cypher"</span>,
             0.45/0.56 ms beat the graph specialist; tabular 0.17 ms beats DuckDB.</div></div>
           <div class="win-row"><div class="m">≈7.5×</div><div class="d"><b>Graph OLTP</b> vs LadybugDB at default
             contracts (≈3,900 vs ≈525 ops/s); parity at matched full durability — disclosed.</div></div>
-          <div class="win-row"><div class="m">0.95</div><div class="d"><b>Vector recall@10</b> at matched
-            HNSW (Chroma 0.97) — competitive <i>while</i> multi-model, with <b>lower peak memory</b>
-            (16.8 vs 24.6&nbsp;GiB, disk-backed index).</div></div>
+          <div class="win-row"><div class="m">0.98</div><div class="d"><b>Vector recall@10</b> at matched
+            graph degree (Chroma 0.97) — more exact <i>while</i> multi-model, with <b>38% lower peak memory</b>
+            (15.2 vs 24.6&nbsp;GiB, disk-backed index); costs 3.4× query latency.</div></div>
         </div>
       </div>
 
@@ -296,7 +296,7 @@ hits = db.query(<span class="s">"cypher"</span>,
         <span class="badge">datasets open</span>
       </div>
       <div class="disclosure"><b>Reproducible end to end.</b> Benchmarks: Cross Validated
-        (stats.stackexchange.com) corpus, CC BY-SA; ArcadeDB 26.8.1.dev2 (workflow: dev3), DuckDB 1.5.4, SQLite 3.46.1,
+        (stats.stackexchange.com) corpus, CC BY-SA; ArcadeDB 26.8.1.dev2 graph / dev3 tabular+workflow / dev20 vector, DuckDB 1.5.4, SQLite 3.46.1,
         LadybugDB 0.18.1, Chroma 1.5.9; 8-core cap; median over 5 reps. GenAI assisted language editing; all content reviewed &amp; verified by the author.</div>
     </div>
   </footer>

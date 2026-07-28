@@ -5,8 +5,15 @@ import base64, mimetypes, os, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 POSTER_DIR = os.path.dirname(HERE)
-PAPER_FIG = "/home/tk/repos/scipy_proceedings/papers/taewoon_kim/figures"
-HUMEMAI_LOGO = "/home/tk/repos/humem.ai/public/images/site/humemai-no-text.png"
+# Derive the paper figures from this file's own location so the script survives
+# the repo being moved (it was hard-coded to /home/tk/repos/scipy_proceedings,
+# which broke when repos were reorganised under owner directories).
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(POSTER_DIR)))
+PAPER_FIG = os.path.join(REPO_ROOT, "papers", "taewoon_kim", "figures")
+HUMEMAI_LOGO = os.environ.get(
+    "HUMEMAI_LOGO",
+    os.path.expanduser("~/repos/humemai/humem.ai/public/images/site/humemai-no-text.png"),
+)
 
 def b64(path):
     mime = mimetypes.guess_type(path)[0] or "image/png"

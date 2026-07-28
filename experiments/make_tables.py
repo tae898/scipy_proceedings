@@ -1,19 +1,31 @@
 #!/usr/bin/env python3
-"""Generate the paper's result tables from results/runs.csv.
+"""Generate the paper's result tables from results/runs.jsonl.
 
 Aggregates the 5 reps per (lane, backend, dataset, workload) cell into
 median [min-max] and emits Markdown tables to results/tables.md. Results go in tables, not figures
 (see ../README and the paper PLAN). Run after run.py:
 
     python make_tables.py
+
+Source of truth is runs.jsonl, which run.py APPENDS to, not runs.csv, which
+run.py OVERWRITES with only the lanes of the run that just finished. Reading
+the CSV after a single-lane re-run (e.g. `--lanes graph`) silently empties
+every other lane's table. Because the jsonl accumulates across runs, a
+canonical-row rule is required: keep only the newest row per
+(lane, backend, dataset, workload, rep) by ts_utc, so a re-measured cell
+replaces the old one instead of being averaged with it.
 """
 import csv
+import json
 import os
 import collections
 import statistics as st
 
 HERE = __file__.rsplit("/", 1)[0]
-RUNS = os.environ.get("RUNS_CSV", f"{HERE}/results/runs.csv")
+# The paper's tables are generated from the curated results/runs_paper.csv,
+# which pins one configuration per lane (notably the durability contract used
+# for the tabular headline). Point RUNS elsewhere to regenerate from raw logs.
+RUNS = os.environ.get("RUNS", f"{HERE}/results/runs_paper.csv")
 OUT = f"{HERE}/results/tables.md"
 
 TIERS = ["tiny", "small", "medium"]
@@ -27,10 +39,35 @@ def fnum(x):
         return None
 
 
+def read_rows(path):
+    """Rows from a curated .csv or an appended .jsonl run log."""
+    if path.endswith(".jsonl"):
+        return [json.loads(ln) for ln in open(path) if ln.strip()]
+    return list(csv.DictReader(open(path)))
+
+
 def load():
+    """Newest row per (lane, backend, dataset, workload, rep), grouped by cell.
+
+    The canonical-row rule matters for runs.jsonl, which run.py appends to, so a
+    re-measured cell would otherwise be averaged with the run it replaces. It is
+    a no-op on a curated CSV that already holds one row per rep.
+    """
+    canonical = {}
+    for r in read_rows(RUNS):
+        key = (
+            r.get("lane"),
+            r.get("backend"),
+            r.get("dataset"),
+            r.get("workload", ""),
+            r.get("rep"),
+        )
+        prev = canonical.get(key)
+        if prev is None or str(r.get("ts_utc", "")) >= str(prev.get("ts_utc", "")):
+            canonical[key] = r
     g = collections.defaultdict(list)
-    for r in csv.DictReader(open(RUNS)):
-        g[(r["lane"], r["backend"], r["dataset"], r.get("workload", ""))].append(r)
+    for (lane, backend, dataset, workload, _rep), r in canonical.items():
+        g[(lane, backend, dataset, workload)].append(r)
     return g
 
 
@@ -101,9 +138,11 @@ def main():
     w("")
 
     # ---- T2c: vector ----
-    w("## Vector (ANN, HNSW @ M=16, ef_construction=100, ef_search=100): Chroma, ArcadeDB\n")
-    w("Matched HNSW parameters. Build = insert+index (s). Query = mean latency (ms). "
-      "recall@10 vs exact ground truth.\n")
+    w("## Vector (ANN, matched graph degree: Chroma M=16, ArcadeDB maxConnections=32; "
+      "ef_construction=100, ef_search=100): Chroma, ArcadeDB\n")
+    w("Degree is matched by effect, not by name: hnswlib builds its base layer at 2M, while "
+      "ArcadeDB's maxConnections is the per-layer out-degree. Build = insert+index (s). "
+      "Query = mean latency (ms). recall@10 vs exact ground truth.\n")
     w("| Tier | Backend | # vectors | Build s | Query ms | recall@10 | Peak MiB | DB MiB |")
     w("|------|---------|----------:|--------:|---------:|----------:|---------:|-------:|")
     for ds in TIERS:
