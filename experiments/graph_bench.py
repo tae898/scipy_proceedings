@@ -129,8 +129,14 @@ def be_arcadedb(users, posts, posted, answers, workload):
                             [to[c] for _, c in edges])
 
     gav_build_s = 0.0
+    # BENCH_GAV=0 skips the view so the OLAP suite runs against the base graph.
+    # The paper says the GAV "accelerates ArcadeDB's analytical traversals";
+    # without this switch there is no way to measure the claim on this corpus,
+    # and an acceleration figure borrowed from another corpus would not support
+    # the sentence it is attached to.
+    want_gav = os.environ.get("BENCH_GAV", "1") != "0"
     with bc.timed() as t_idx:
-        if workload == "olap":  # GAV accelerates the SAME OpenCypher queries (ex 10)
+        if workload == "olap" and want_gav:  # GAV accelerates the SAME OpenCypher queries (ex 10)
             g0 = time.time()
             db.command("sql", f"CREATE GRAPH ANALYTICAL VIEW {GAV_NAME} "
                        "VERTEX TYPES (User, Post) EDGE TYPES (POSTED, ANSWERS) "

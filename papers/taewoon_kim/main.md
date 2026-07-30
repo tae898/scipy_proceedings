@@ -290,8 +290,9 @@ answers, with the 108,101 users linked to them), the end-to-end workflow runs wa
 **≈16 ms** (vector ≈10 ms, SQL ≈5 ms, Cypher ≈1.4 ms; median over 20 reps after 5
 warmups, range 15–17 ms). The graph is stored with ArcadeDB's default bidirectional
 edges, the Cypher traversal is accelerated by a Graph Analytical View, and the same
-traversal through ArcadeDB's native SQL `MATCH` surface answers in ≈3 ms: the two query
-surfaces are at parity over the same storage. (Preparing this workflow surfaced two
+traversal through ArcadeDB's native SQL `MATCH` surface answers in ≈3 ms: both surfaces
+run the same traversal over the same storage, within about 2× of each other, with neither
+a translation layer bolted onto the other. (Preparing this workflow surfaced two
 engine issues that we reported upstream and that were each fixed within days — a Cypher
 planner gap that made this traversal ≈143 ms, and a vector-index maintenance bug that
 inflated the vector step to ≈100 ms and the bulk load by ≈45× — an instance of the
