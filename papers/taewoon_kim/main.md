@@ -174,20 +174,16 @@ Silicon, and Windows x86-64), each carrying the matching JRE, across Python 3.10
 twenty wheels in total. The user runs `pip install arcadedb-embedded` and gets a working
 multi-model database with **no Java installation and no `JAVA_HOME`**, and with no server to
 deploy or operate. The JVM is an implementation detail sealed inside the package
-([](#fig-arch)). The cost is wheel size, about 62 MB per wheel for the versions measured here
-(Linux x86-64; the other platforms are within a few MB), dominated by the runtime. We keep it
-small by trimming the JRE with `jlink` to only the modules the engine needs and by excluding
-JARs the engine does not require. That is the price of "no Java to install," paid once at
-install time.
+([](#fig-arch)). The cost is wheel size, about 67 MB per wheel (Linux x86-64; the other
+platforms are within a few MB), dominated by the runtime. We keep it small by trimming the JRE
+with `jlink` to only the modules the engine needs and by excluding JARs the engine does not
+require. That is the price of "no Java to install," paid once at install time.
 
-The wheels measured here excluded the optional in-process HTTP server and its Studio web UI,
-which later releases bundle again. The trade is worth stating because it is small and
-measurable: the server stack is 12 JARs, 7.65 MB, and adds 8.0 MB to the wheel, the extra
-0.8 MB being JRE modules `jlink` pulls in only for it, taking a Linux x86-64 wheel from 59 MB
-to 67 MB. It costs nothing at run time until `create_server()` is called, beyond about 10 ms
-of one-time JVM startup for the longer classpath, with no measurable effect on resident
-memory. Embedded use is unaffected either way, which is why the numbers reported here carry
-over.
+About 8 MB of the wheel is an optional in-process HTTP server with a web UI, inert unless the
+program calls `create_server()`: 12 JARs totalling 7.65 MB, plus 0.8 MB of JRE modules `jlink`
+pulls in only for them, and about 10 ms of one-time JVM startup for the longer classpath, with
+no measurable effect on resident memory. The wheels benchmarked here were built without it and
+are about 62 MB; embedded behaviour is identical either way.
 
 :::{figure} figures/architecture.png
 :label: fig-arch
