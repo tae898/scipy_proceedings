@@ -289,7 +289,8 @@ complete set of Cross Validated questions and answers (all 213,761 questions and
 answers, with the 108,101 users linked to them), the end-to-end workflow runs warm in
 **≈16 ms** (vector ≈10 ms, SQL ≈5 ms, Cypher ≈1.4 ms; median over 20 reps after 5
 warmups, range 15–17 ms). The graph is stored with ArcadeDB's default bidirectional
-edges, the Cypher traversal is accelerated by a Graph Analytical View, and the same
+edges, the Cypher traversal is accelerated by a Graph Analytical View (measured at 2.9×
+on the analytical suite, see below), and the same
 traversal through ArcadeDB's native SQL `MATCH` surface answers in ≈3 ms: both surfaces
 run the same traversal over the same storage, within about 2× of each other, with neither
 a translation layer bolted onto the other. (Preparing this workflow surfaced two
@@ -427,8 +428,9 @@ at least as much as in engines. Where ArcadeDB's advantage is contract-independe
 per-operation read latency: its point and 1-hop reads beat LadybugDB's at every percentile
 ([](#tbl-latency)). On graph analytics the analytics-oriented LadybugDB wins
 (≈66 ms vs ≈800 ms). The GAV
-is worth it on its own terms (it builds in ≈1.4 s and accelerates ArcadeDB's analytical
-traversals), but it narrows rather than closes the gap to a dedicated analytical
+is worth it on its own terms: ablating it on this corpus (N=5 per arm) takes the analytical
+suite from ≈165 ms to ≈476 ms at the median, so the view is worth **2.9×** for a one-time
+≈1.4 s build. It narrows rather than closes the gap to a dedicated analytical
 graph engine. The costs are space and build memory. We build with ArcadeDB's default
 *bidirectional* edges, which store adjacency pointers on both endpoints so traversals run
 either way and the analytical planner can start from either end; this is the out-of-the-box
@@ -438,7 +440,7 @@ against LadybugDB's ≈684 MiB C++ footprint). The on-disk graph is ≈43× Lady
 store (≈1,774 vs ≈41 MiB). Again, the summary is complementarity: transactional graph writes and
 point traversals here, heavy graph analytics on a specialist.
 
-:::{table} Graph lane (Cross Validated corpus): LadybugDB, ArcadeDB. OLTP is neighborhood/traversal point ops (ops/s). OLAP is a multi-query analytical suite (ms). ArcadeDB OLAP uses a Graph Analytical View (one-time build shown). Values are median [min–max] over 5 reps. Durability contracts: LadybugDB fsyncs per commit (no relaxation knob); ArcadeDB shown at its async default — at matched per-commit fsync (ablation) its suite throughput is ≈539 ops/s, near parity with LadybugDB. On-disk DB size is deterministic across reps (no range). Peak = container memory, DB = on-disk size (MiB).
+:::{table} Graph lane (Cross Validated corpus): LadybugDB, ArcadeDB. OLTP is neighborhood/traversal point ops (ops/s). OLAP is a multi-query analytical suite (ms). ArcadeDB OLAP uses a Graph Analytical View (one-time build shown); ablating it raises the suite median from ≈165 ms to ≈476 ms, so the view is worth 2.9× (N=5 per arm). Values are median [min–max] over 5 reps. Durability contracts: LadybugDB fsyncs per commit (no relaxation knob); ArcadeDB shown at its async default — at matched per-commit fsync (ablation) its suite throughput is ≈539 ops/s, near parity with LadybugDB. On-disk DB size is deterministic across reps (no range). Peak = container memory, DB = on-disk size (MiB).
 :label: tbl-graph
 | Backend | OLTP ops/s | OLAP ms | GAV build s | Peak MiB | DB MiB |
 |---|--:|--:|--:|--:|--:|
