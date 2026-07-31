@@ -18,6 +18,32 @@ import pandas as pd
 
 import bench_common as bc
 
+
+def _arcadedb_version():
+    """Version from the installed distribution metadata, not the module attr.
+
+    `arcadedb_embedded.__version__` was baked at build time and did not track
+    the wheel: a 26.8.1.dev20 wheel reported "26.8.1.dev0". Fixed upstream in
+    9f2f542c84 (shipped in 26.8.1.dev21), but every run in this paper used an
+    earlier wheel, so results/runs.csv records lib_version 26.8.1.dev0 for
+    ArcadeDB rows that actually ran dev2, dev3 and dev20. The authoritative
+    versions are the pins in build_images.sh, which is what the paper states.
+
+    importlib.metadata reads the installed distribution, so it is right on
+    every wheel including the old ones.
+    """
+    try:
+        from importlib.metadata import version as _v
+        return _v("arcadedb-embedded")
+    except Exception:
+        try:
+            import arcadedb_embedded as _a
+            return getattr(_a, "__version__", "?")
+        except Exception:
+            return "?"
+
+
+
 COLS = ["id", "post_type", "owner_user_id", "score", "view_count", "title"]
 
 
@@ -171,7 +197,7 @@ def be_arcadedb(df, workload):
         delete=lambda i: _tx(lambda: db.command("sql", "DELETE FROM Post WHERE id=:i", {"i": i})),
         olap_one=lambda q: db.query("sql", q.replace("posts", "Post")).to_list(),
         close=lambda: ctx.__exit__(None, None, None),
-        version=getattr(arcadedb, "__version__", "?"),
+        version=_arcadedb_version(),
     )
 
 

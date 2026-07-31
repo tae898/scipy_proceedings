@@ -27,6 +27,32 @@ import pandas as pd
 import arcadedb_embedded as arcadedb
 
 
+def _arcadedb_version():
+    """Version from the installed distribution metadata, not the module attr.
+
+    `arcadedb_embedded.__version__` was baked at build time and did not track
+    the wheel: a 26.8.1.dev20 wheel reported "26.8.1.dev0". Fixed upstream in
+    9f2f542c84 (shipped in 26.8.1.dev21), but every run in this paper used an
+    earlier wheel, so results/runs.csv records lib_version 26.8.1.dev0 for
+    ArcadeDB rows that actually ran dev2, dev3 and dev20. The authoritative
+    versions are the pins in build_images.sh, which is what the paper states.
+
+    importlib.metadata reads the installed distribution, so it is right on
+    every wheel including the old ones.
+    """
+    try:
+        from importlib.metadata import version as _v
+        return _v("arcadedb-embedded")
+    except Exception:
+        try:
+            import arcadedb_embedded as _a
+            return getattr(_a, "__version__", "?")
+        except Exception:
+            return "?"
+
+
+
+
 def load_question_embeddings(vectors_dir, name):
     base = os.path.join(vectors_dir, f"{name}-questions")
     meta = json.load(open(f"{base}.meta.json"))
@@ -230,7 +256,7 @@ def main():
         vm, vsd = stat(vs); sm, ssd = stat(ss); gm, gsd = stat(gs); mm, msd = stat(ms); tm, tsd = stat(ts)
         result = {
             "showcase": "vector->sql->cypher", "dataset": args.name,
-            "lib_version": getattr(arcadedb, "__version__", "?"),
+            "lib_version": _arcadedb_version(),
             "n_questions": len(q), "n_answers": len(a), "n_users": len(u),
             "n_asked": len(asked), "n_has_answer": len(has_ans), "n_answered": len(answered),
             "build_s": round(build_s, 3), "warmup": args.warmup, "query_reps": args.query_reps,
