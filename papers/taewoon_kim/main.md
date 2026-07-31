@@ -371,7 +371,11 @@ this work produced landed: ArcadeDB (`arcadedb-embedded`) 26.8.1.dev2 for the gr
 26.8.1.dev20 for the vector lane, which was re-measured last at matched graph degree. Re-running
 the graph lane on 26.8.1.dev20 reproduces its published numbers within run-to-run spread (OLAP
 796.4 ms vs 796.3, GAV build 1.40 s vs 1.43, OLTP 3,762 ops/s vs 3,929), so the version spread
-is a reporting detail rather than a confound. DuckDB 1.5.4, SQLite
+is a reporting detail rather than a confound. Those ArcadeDB versions are the
+pins in `experiments/build_images.sh` and are authoritative; the `lib_version` column in
+`results/runs.csv` reads `26.8.1.dev0` for every ArcadeDB row, because
+`arcadedb_embedded.__version__` was baked at build time and did not track the wheel until
+26.8.1.dev21, which is later than every wheel used here. DuckDB 1.5.4, SQLite
 3.46.1, LadybugDB (`ladybug`) 0.18.1, Chroma 1.5.9. Embeddings are 384-dimensional
 (`all-MiniLM-L6-v2`).
 
