@@ -419,8 +419,11 @@ engines' respective defaults ArcadeDB runs ≈7.5× LadybugDB's mixed-OLTP throu
 vs ≈525 ops/s) — but at ArcadeDB's matched-strict ablation the suite converges to near
 parity (≈539 vs ≈525), so the headline gap is a difference in default durability contracts
 at least as much as in engines. Where ArcadeDB's advantage is contract-independent is
-per-operation read latency: its point and 1-hop reads beat LadybugDB's at every percentile
-([](#tbl-latency)). On graph analytics the analytics-oriented LadybugDB wins
+per-operation read latency: its point and 1-hop reads beat LadybugDB's at both reported
+percentiles ([](#tbl-latency)), by 2.8–9.0× across both operations. The 1-hop
+*maximum* inverts (74.7 ms against 11.0), which is one worst-case observation rather than
+a percentile, but we report it because it is the shape a JVM engine gives you: better
+typical latency, a longer worst case. On graph analytics the analytics-oriented LadybugDB wins
 (≈66 ms vs ≈800 ms). The GAV
 is worth it on its own terms (it builds in ≈1.4 s and accelerates ArcadeDB's analytical
 traversals), but it narrows rather than closes the gap to a dedicated analytical
@@ -507,7 +510,7 @@ not free, and for memory-constrained single-purpose tasks a specialist may be th
 
 Taken together, the comparison supports a measured claim — more measured than our own first
 draft of it. ArcadeDB-from-Python has *excellent point-operation latencies* (graph reads beat
-the graph specialist at every percentile; tabular reads beat DuckDB), *ample transactional
+the graph specialist at p50 and p99, with a longer worst case; tabular reads beat DuckDB), *ample transactional
 throughput under either durability contract* (converging with the specialists at the fsync
 floor when strict), is *competitive on vector search at matched graph degree, trading query
 latency for slightly higher recall and 38% lower peak memory*, is *outclassed by specialists on heavy analytics and by in-process C on raw
