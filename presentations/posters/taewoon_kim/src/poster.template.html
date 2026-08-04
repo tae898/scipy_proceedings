@@ -176,7 +176,7 @@
           <img src="{{ARCH_IMG}}" alt="architecture">
           <div class="arch-cap">A Java engine sealed inside a Python wheel: one process hosts an in-process
             JVM (via JPype) running ArcadeDB over a local file-backed DB; documents/SQL, property graph
-            (Cypher) and HNSW vectors reached through <b>one handle</b>. Wheel ≈62 MB, plain
+            (Cypher) and HNSW vectors reached through <b>one handle</b>. Wheel ≈67 MB, plain
             <span class="mono" style="color:var(--teal)">pip install</span>.</div>
         </div>
       </div>
@@ -209,9 +209,9 @@ hits = db.query(<span class="s">"cypher"</span>,
         </div>
 
         <div class="statline">
-          <div class="big">≈16&nbsp;ms</div>
+          <div class="big">≈13&nbsp;ms</div>
           <div class="sub">warm end-to-end (median of 20 reps) over all <b>213,761 questions</b> + 208,986 answers.
-            &nbsp;<b>1 process · 1 transaction · 0 ETL</b> &nbsp;(vector 10 · SQL 5 · Cypher 1.4 ms; native SQL MATCH: 3 ms)</div>
+            &nbsp;<b>1 process · 1 transaction · 0 ETL</b> &nbsp;(vector 5.9 · SQL 5.0 · Cypher 2.0 ms; native SQL MATCH: 3.2 ms)</div>
         </div>
       </div>
 
@@ -239,22 +239,22 @@ hits = db.query(<span class="s">"cypher"</span>,
         <h2 style="margin-bottom:2px;">Fast where it's designed to be</h2>
         <div class="wins">
           <div class="win-row"><div class="m" style="font-size:22px;white-space:nowrap;">p99 wins</div><div class="d"><b>Read latency</b>: graph point/hop
-            0.45/0.56 ms beat the graph specialist; tabular 0.17 ms beats DuckDB.</div></div>
-          <div class="win-row"><div class="m">≈7.5×</div><div class="d"><b>Graph OLTP</b> vs LadybugDB at default
-            contracts (≈3,900 vs ≈525 ops/s); parity at matched full durability — disclosed.</div></div>
+            0.74/0.81 ms beat the graph specialist; tabular 0.17 ms beats DuckDB.</div></div>
+          <div class="win-row"><div class="m">≈6.1×</div><div class="d"><b>Graph OLTP</b> vs LadybugDB at default
+            contracts (≈3,200 vs ≈525 ops/s); parity at matched full durability — disclosed.</div></div>
           <div class="win-row"><div class="m">0.98</div><div class="d"><b>Vector recall@10</b> at matched
-            graph degree (Chroma 0.97) — more exact <i>while</i> multi-model, with <b>38% lower peak memory</b>
-            (15.2 vs 24.6&nbsp;GiB, disk-backed index); costs 3.4× query latency.</div></div>
+            graph degree (Chroma 0.97) — more exact <i>while</i> multi-model, with <b>14% lower peak memory</b>
+            (21.1 vs 24.6&nbsp;GiB, disk-backed index); costs 3.5× query latency.</div></div>
         </div>
       </div>
 
       <div class="card tint">
         <span class="eyebrow orange">…and where it isn't (we don't hide it)</span>
-        <p style="margin-top:7px;">Specialists win <b>heavy analytics</b>: DuckDB ≈9 ms vs ≈1,300 ms
-          (tabular OLAP); LadybugDB ≈66 ms vs ≈800 ms (graph, a <b>GAV</b> narrows the gap). WAL-mode
-          <b>SQLite owns raw point-op throughput</b> (≈87k vs ≈5.8k ops/s — in-process C is untouchable;
+        <p style="margin-top:7px;">Specialists win <b>heavy analytics</b>: DuckDB ≈9 ms vs ≈1,400 ms
+          (tabular OLAP); LadybugDB ≈66 ms vs ≈840 ms (graph, a <b>GAV</b> narrows the gap). WAL-mode
+          <b>SQLite owns raw point-op throughput</b> (≈87k vs ≈6.4k ops/s — in-process C is untouchable;
           durability contracts disclosed per engine). The standing
-          cost is <span class="hlo">memory</span> — a JVM baseline (≈852 MiB tabular) above the lean C peers;
+          cost is <span class="hlo">memory</span> — a JVM baseline (≈803 MiB tabular) above the lean C peers;
           startup is sub-second, with an occasional GC tail. But these gaps are a
           <span class="hl">moving target</span>: ArcadeDB ships ~monthly and the binding packages each
           release, so Python benefits automatically.</p>
@@ -296,7 +296,7 @@ hits = db.query(<span class="s">"cypher"</span>,
         <span class="badge">datasets open</span>
       </div>
       <div class="disclosure"><b>Reproducible end to end.</b> Benchmarks: Cross Validated
-        (stats.stackexchange.com) corpus, CC BY-SA; ArcadeDB 26.8.1.dev2 graph / dev3 tabular+workflow / dev20 vector, DuckDB 1.5.4, SQLite 3.46.1,
+        (stats.stackexchange.com) corpus, CC BY-SA; ArcadeDB 26.8.1 (one released version, every lane), DuckDB 1.5.4, SQLite 3.46.1,
         LadybugDB 0.18.1, Chroma 1.5.9; 8-core cap; median over 5 reps. GenAI assisted language editing; all content reviewed &amp; verified by the author.</div>
     </div>
   </footer>
