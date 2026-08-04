@@ -27,7 +27,14 @@ from datetime import datetime, timezone
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.abspath(os.environ.get("BENCH_DATA", os.path.join(
     HERE, "..", "..", "..", "bindings", "python", "examples", "data")))
-RESULTS = os.path.join(HERE, "results")
+# Ablation arms (BENCH_GAV=0, BENCH_ARCADE_WAL_FLUSH=2) must NOT land in the
+# same runs.jsonl as the default-configuration campaign. Curation keeps the
+# newest row per (lane, backend, dataset, workload, rep), so an ablation run
+# afterwards would silently become the canonical row and put a non-default
+# operating point into the paper's headline table. Point BENCH_RESULTS_DIR at
+# a sibling directory instead; the ablation then carries its own manifest and
+# ENV.md, which is what an ablation should have anyway.
+RESULTS = os.path.join(HERE, os.environ.get("BENCH_RESULTS_DIR", "results"))
 MEMDIR = os.path.join(RESULTS, "mem")
 
 CPUSET = "0-7"
@@ -132,8 +139,15 @@ def run_one(job, rep, mem, heap, image_ids):
     image_ids.setdefault(image, sh(["docker", "inspect", "--format", "{{.Id}}", image]))
     cmd = ["docker", "run", "-d", "--cpuset-cpus", CPUSET, "--memory", mem, "--memory-swap", mem,
            "-e", f"ARCADEDB_HEAP={heap}", "-e", f"RUN_LABEL={run_id}", "-e", "LAT_DIR=/work/results/lat",
+           # Ablation knobs, forwarded so an ablation runs under the SAME cpuset,
+           # memory cap, heap and sampler as the arm it is compared against. The
+           # GAV ablation previously had to be driven by hand outside this
+           # orchestrator, which is why its numbers could not be reconciled with
+           # the table's OLAP cell.
            *(["-e", f"BENCH_ARCADE_WAL_FLUSH={os.environ['BENCH_ARCADE_WAL_FLUSH']}"]
              if os.environ.get("BENCH_ARCADE_WAL_FLUSH") else []),
+           *(["-e", f"BENCH_GAV={os.environ['BENCH_GAV']}"]
+             if os.environ.get("BENCH_GAV") else []),
            "-v", f"{HERE}:/work", "-w", "/work", "-v", f"{DATA}:/data:ro", image, "python"] + job["args"]
     cid = sh(cmd)
     if len(cid) < 12:

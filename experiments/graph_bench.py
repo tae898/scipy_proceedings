@@ -258,9 +258,15 @@ def main():
            "ingest_s": round(ingest_s, 3), "index_build_s": round(be["index_build_s"], 3),
            "load_s": round(ingest_s, 3),  # continuity
            "ingest_edges_per_s": round((len(posted) + len(answers)) / ingest_s, 1) if ingest_s else None}
-    if be.get("gav_build_s"):
-        res["gav_build_s"] = round(be["gav_build_s"], 3)
-        res["gav"] = True
+    if args.backend == "arcadedb":
+        # Record the arm unconditionally. Recording `gav` only when a view was
+        # built made the ablation row indistinguishable from the default arm:
+        # BENCH_GAV=0 produced a row with no `gav` key at all, so nothing in the
+        # artifact said which arm it came from. An ablation row that does not
+        # name its arm cannot be read back.
+        res["gav"] = (args.workload == "olap"
+                      and os.environ.get("BENCH_GAV", "1") != "0")
+        res["gav_build_s"] = round(be.get("gav_build_s") or 0.0, 3)
     if args.workload == "oltp":
         m, raw = run_oltp(be, users, posts, args.ops)
     else:
