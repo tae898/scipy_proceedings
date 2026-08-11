@@ -1,3 +1,0 @@
-# Unused SVG intermediates (figures are referenced as .png; sources are the .dot files
-# in the arcadedb-embedded-python repo)
-figures/*.svg
